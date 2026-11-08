@@ -1,0 +1,109 @@
+# ── 비밀값 · 접속 키 (절대 커밋 금지) ──
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+*.secret
+.streamlit/secrets.toml
+
+# ── 대용량 데이터 · 모델 가중치 (AI Hub 원천 데이터, 학습 산출물) ──
+# AI Hub 데이터(사진 포함)는 저장소(공개 GitHub)에 올리지 않는다 → datasets/ 아래에 둔다 (TODO.md 14장 #12)
+datasets/
+data/raw/
+data/processed/
+runs/
+mlruns/
+wandb/
+checkpoints/
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.safetensors
+*.h5
+*.joblib
+*.pkl
+*.npy
+*.npz
+*.parquet
+*.tfrecord
+# 내려받은 압축 원본 (AI Hub 분할 압축 포함)
+*.zip
+*.z[0-9][0-9]
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+# 모델·데이터셋 캐시 (Hugging Face, 로컬 VLM 가중치 등)
+.cache/
+hf_cache/
+huggingface/
+
+# ── Python ──
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+.coverage
+coverage.xml
+htmlcov/
+dist/
+build/
+
+# ── Node ──
+node_modules/
+.next/
+.nuxt/
+.vite/
+out/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ── 로그 · 임시 · 실행 파일 ──
+*.log
+logs/
+tmp/
+*.tmp
+*.bak
+*.pid
+nohup.out
+
+# ── OS · 에디터 · 오피스 ──
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+*.swp
+*.swo
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+# 발표자료(PPT·한글·엑셀)를 열어 둘 때 생기는 잠금 파일
+~$*
+.~lock.*#
+# Claude Code 개인 설정 (팀 공용 .claude/settings.json 은 커밋)
+.claude/settings.local.json
+
+# ── 31-Web 런타임 데이터 (SQLite DB · 업로드 사진 · 썸네일 · 로그 · pid · 스냅샷 · 학습 로그 사본) ──
+31-Web/data/
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+*.sqlite3
+
+# ── 31-Web 실제 용접 사진 (제공 데이터) ──
+# static/ 은 로그인 없이 공개되고 GitHub 도 공개이므로, 제공 데이터 사진은 커밋하지 않는다.
+# 폴더만 유지(.gitkeep)하고 사진은 서버에 직접 복사한다. 직접 만든 그림·아이콘은 landing/ edu/ 에 둔다.
+31-Web/app/static/images/samples/*
+!31-Web/app/static/images/samples/.gitkeep
