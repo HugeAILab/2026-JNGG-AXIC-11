@@ -159,7 +159,7 @@ def status(conn: sqlite3.Connection, log_id: int, stage_of) -> dict[str, Any]:
             "analysis": {"status": analysis["status"], "description": (analysis["description"] or "")[:180],
                          "source": analysis["explain_source"]} if analysis else None,
         })
-    done = sum(1 for x in items if x["stage"] in ("DONE", "ERROR"))
+    done = sum(1 for x in items if x["ai_status"] in ("DONE", "ERROR"))
     planned = (log or {}).get("detail", {}).get("photo_count") or len(items)
     return {"ok": True, "log_id": log_id, "total": len(items), "planned": planned, "done": done,
             "finished": bool(items) and done == len(items) and len(items) >= planned,

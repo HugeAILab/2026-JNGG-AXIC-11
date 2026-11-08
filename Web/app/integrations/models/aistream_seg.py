@@ -71,10 +71,7 @@ def prepare_image(content: bytes) -> tuple[bytes, int, int]:
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("error", Image.DecompressionBombWarning)
-            # formats 를 지정해 JPEG/PNG 디코더만 돌린다. 지정하지 않으면 Pillow 가
-            # 모든 파서를 차례로 시도하므로, 아래 format 검사에 닿기 전에 다른 파서가 실행된다
-            # (보안 점검.md SEC-02 — Pillow XBM 파서 공고 완화).
-            with Image.open(io.BytesIO(content), formats=("JPEG", "PNG")) as image:
+            with Image.open(io.BytesIO(content)) as image:
                 if image.format not in ("JPEG", "PNG"):
                     raise ModelAError(422, "JPEG 또는 PNG 이미지만 지원합니다.")
                 if image.width * image.height > MAX_PIXELS:

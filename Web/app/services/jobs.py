@@ -28,10 +28,12 @@ A_RETRIES = 3
 
 
 def stage_of(inspection_id: int, ai_status: str) -> str:
+    if ai_status in ("DONE", "ERROR"):
+        return ai_status  # 완료·실패는 DB 확정 상태가 화면 표시의 기준이다
     s = STAGES.get(inspection_id)
-    if s:
+    if s and s not in ("DONE", "ERROR"):
         return s
-    return {"QUEUED": "A_WAIT", "RUNNING": "A_RUN", "DONE": "DONE", "ERROR": "ERROR"}.get(ai_status, "A_WAIT")
+    return {"QUEUED": "A_WAIT", "RUNNING": "A_RUN"}.get(ai_status, "A_WAIT")
 
 
 def enqueue(inspection_id: int, *, trigger: str = "AUTO", image_rel: str | None = None,
@@ -96,10 +98,10 @@ async def run(inspection_id: int, *, trigger: str = "AUTO", image_rel: str | Non
         await _run(inspection_id, trigger, image_rel, user_id)
     except Exception as exc:  # noqa: BLE001 — 예기치 않은 오류도 건을 ERROR 로 남겨 화면이 멈추지 않게
         log.exception("AI job failed for inspection %s", inspection_id)
-        STAGES[inspection_id] = "ERROR"
         with db.connect() as conn:
             conn.execute("UPDATE inspections SET ai_status='ERROR', ai_error=?, updated_at=? WHERE id=?",
                          (f"내부 오류: {type(exc).__name__}"[:200], db.now_str(), inspection_id))
+        STAGES[inspection_id] = "ERROR"
 
 
 async def _run(inspection_id: int, trigger: str, image_rel: str | None, user_id: int | None) -> None:

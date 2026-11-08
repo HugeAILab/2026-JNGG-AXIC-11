@@ -49,15 +49,3 @@
     document.querySelectorAll("details.usermenu[open]").forEach(function (d) { if (!d.contains(e.target)) d.removeAttribute("open"); });
   });
 })();
-
-// 이미지 대체: CSP 때문에 onerror 속성을 쓸 수 없어 data-fallback 으로 처리한다.
-// defer 로 늦게 실행되므로, 이미 실패한 이미지(complete && naturalWidth===0)도 함께 본다.
-document.querySelectorAll('img[data-fallback]').forEach(function (img) {
-  function swap() {
-    img.removeEventListener('error', swap);
-    var alt = img.getAttribute('data-fallback');
-    if (alt && img.src !== alt) { img.src = alt; }
-  }
-  img.addEventListener('error', swap);
-  if (img.complete && img.naturalWidth === 0) { swap(); }
-});

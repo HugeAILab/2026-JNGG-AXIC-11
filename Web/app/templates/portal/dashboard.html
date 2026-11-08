@@ -83,7 +83,6 @@
 </div>
 {% endblock %}
 {% block scripts %}
-{# chart.js 4.4.1 자체 제공 사본. CDN 의 .min.js 는 jsdelivr 가 즉석 생성하는 파일이라 쓰지 않는다 (static/vendor/출처.md) #}
-<script src="{{ static('vendor/chart.umd.js') }}" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
 <script src="{{ static('js/dashboard.js') }}" defer></script>
 {% endblock %}

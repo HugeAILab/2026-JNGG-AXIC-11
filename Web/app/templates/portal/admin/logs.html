@@ -36,7 +36,7 @@
 </section>
 {% endblock %}
 {% block scripts %}
-<script nonce="{{ csp_nonce }}">
+<script>
 document.addEventListener("click", function (e) {
   var row = e.target.closest("tr.log-row.has-detail");
   if (!row || e.target.closest("a")) return;

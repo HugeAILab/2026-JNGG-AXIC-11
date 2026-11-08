@@ -11,7 +11,7 @@ from typing import Any
 from fastapi import Request
 from fastapi.templating import Jinja2Templates
 
-from . import auth, config, db, middleware, reference
+from . import auth, config, db, reference
 from .routes import find_by_key, menu_for
 
 templates = Jinja2Templates(directory=str(config.APP_DIR / "templates"))
@@ -84,6 +84,5 @@ def render(request: Request, name: str, ctx: dict[str, Any] | None = None, *,
         active_top=(active or "").split(".")[0],
         crumb=found,
         bell=_bell_count() if user else 0,
-        csp_nonce=request.scope.get(middleware.NONCE_KEY, ""),
     )
     return templates.TemplateResponse(request, name, ctx, status_code=status_code)

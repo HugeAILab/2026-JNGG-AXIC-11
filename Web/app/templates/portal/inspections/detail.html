@@ -299,7 +299,7 @@
 {% endblock %}
 {% block scripts %}
 <script src="{{ static('js/segmentation.js') }}" defer></script>
-<script nonce="{{ csp_nonce }}">
+<script>
 document.addEventListener("DOMContentLoaded", function () {
   var dlg = document.getElementById("seg-dialog"), btn = document.getElementById("open-seg");
   if (btn) btn.addEventListener("click", function () {
@@ -333,7 +333,7 @@ document.addEventListener("DOMContentLoaded", function () {
   })();
 });
 </script>
-<script nonce="{{ csp_nonce }}">
+<script>
 document.addEventListener("click", function (e) {
   var b = e.target.closest("[data-toggle-rest]");
   if (b) { var box = b.previousElementSibling; box.classList.toggle("show-rest"); b.textContent = box.classList.contains("show-rest") ? "접기" : "나머지 점수 보기"; }

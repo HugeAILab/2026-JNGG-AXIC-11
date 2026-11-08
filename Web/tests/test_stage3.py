@@ -25,7 +25,7 @@ from app import config, db  # noqa: E402
 from app.integrations.models import coco_rle, weld_api  # noqa: E402
 from app.integrations.models.base import BResult, ModelError  # noqa: E402
 from app.seed import seed  # noqa: E402
-from app.services import ai_pipeline  # noqa: E402
+from app.services import ai_pipeline, jobs  # noqa: E402
 
 # 같은 프로세스의 다른 테스트 모듈이 먼저 설정을 읽었을 수 있으므로 파일 폴더는 직접 임시 폴더로 바꾼다
 _files = Path(tempfile.mkdtemp(prefix="qcheck-files-"))
@@ -60,6 +60,17 @@ def seg(*items, w=100, h=80):
 
 
 class RleAndPipelineRules(unittest.TestCase):
+    def test_stage_does_not_claim_failure_before_db_commits(self):
+        inspection_id = -28028
+        jobs.STAGES[inspection_id] = "ERROR"
+        try:
+            self.assertEqual(jobs.stage_of(inspection_id, "RUNNING"), "A_RUN")
+            self.assertEqual(jobs.stage_of(inspection_id, "ERROR"), "ERROR")
+            jobs.STAGES[inspection_id] = "B_RUN"
+            self.assertEqual(jobs.stage_of(inspection_id, "DONE"), "DONE")
+        finally:
+            jobs.STAGES.pop(inspection_id, None)
+
     def test_rle_roundtrip_and_area(self):
         m = coco_rle.box_mask(80, 100, 10, 20, 30, 50)
         self.assertEqual(coco_rle.mask_area(m["counts"], 80, 100), 20 * 30)

@@ -8,28 +8,10 @@ scope["root_path"] 에 접두사를 넣는다. Starlette 라우터·StaticFiles 
 """
 from __future__ import annotations
 
-import secrets
-
 from starlette.datastructures import MutableHeaders
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 RAW_PATH_KEY = "weldsight.raw_path"  # 프록시가 실제로 보낸 경로 (/healthz 에서 확인용)
-NONCE_KEY = "weldsight.csp_nonce"    # 요청 1건의 CSP nonce (web.render 가 템플릿으로 넘긴다)
-
-# 스타일은 'unsafe-inline' 을 남긴다: style="" 속성(보고서 결함 박스 위치)은 nonce 로 덮을 수 없다.
-# 외부 스크립트는 없다(chart.js 는 static/vendor 자체 제공). 폰트 CSS 만 cdn.jsdelivr.net 을 허용한다.
-_CSP = (
-    "default-src 'self'; "
-    "script-src 'self' 'nonce-{nonce}'; "
-    "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
-    "font-src 'self' https://cdn.jsdelivr.net; "
-    "img-src 'self' data:; "          # 파비콘이 data:image/svg+xml 인라인
-    "connect-src 'self'; "
-    "form-action 'self'; "
-    "base-uri 'self'; "
-    "object-src 'none'; "
-    "frame-ancestors 'self'"
-)
 
 
 class RootPathMiddleware:
@@ -59,7 +41,7 @@ class RootPathMiddleware:
 
 
 class SecurityHeadersMiddleware:
-    """기본 보안 헤더 + CSP(nonce) + 로그인 화면 캐시 금지 (로그아웃 뒤 '뒤로 가기'로 데이터가 보이지 않게)."""
+    """기본 보안 헤더 + 로그인 화면 캐시 금지 (로그아웃 뒤 '뒤로 가기'로 데이터가 보이지 않게)."""
 
     def __init__(self, app: ASGIApp) -> None:
         self.app = app
@@ -71,12 +53,7 @@ class SecurityHeadersMiddleware:
         root = scope.get("root_path", "")
         path = scope.get("path", "")
         route_path = path[len(root):] if root and path.startswith(root) else path
-        # /static/ 도 CSP 를 붙인다: 없는 파일 요청은 HTML 오류 화면으로 돌아오므로
-        # 여기서 빼면 그 화면만 CSP 없이 나간다. no-store 만 정적 파일에서 제외한다.
-        is_static = route_path.startswith("/static/")
-        nonce = secrets.token_urlsafe(16)
-        scope = dict(scope)
-        scope[NONCE_KEY] = nonce
+        no_store = not route_path.startswith("/static/")
 
         async def _send(message: Message) -> None:
             if message["type"] == "http.response.start":
@@ -84,9 +61,7 @@ class SecurityHeadersMiddleware:
                 h.setdefault("X-Content-Type-Options", "nosniff")
                 h.setdefault("Referrer-Policy", "same-origin")
                 h.setdefault("X-Frame-Options", "SAMEORIGIN")
-                h.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
-                h.setdefault("Content-Security-Policy", _CSP.format(nonce=nonce))
-                if not is_static:
+                if no_store:
                     h.setdefault("Cache-Control", "no-store")
             await send(message)
 
