@@ -1,0 +1,30 @@
+{% extends "portal/base.html" %}
+{% block title %}DB 테이블 정보{% endblock %}
+{% block content %}
+{% macro mb(n) -%}{{ '%.1f'|format(n / 1048576) }} MB{%- endmacro %}
+<div class="page-head">
+  <div><h1>DB 테이블 정보</h1><p class="muted">SQLite 스키마 버전 · 테이블별 행 수 · 마지막 기록 시각 (조회 전용)</p></div>
+</div>
+<section class="kpis">
+  <div class="kpi"><small>스키마 버전</small><strong>{{ version }}</strong><span class="muted">PRAGMA user_version</span></div>
+  <div class="kpi"><small>테이블</small><strong>{{ counts|length }}<em>개</em></strong><span class="muted">전체 {{ '{:,}'.format(total_rows) }}행</span></div>
+  <div class="kpi"><small>DB 파일</small><strong>{{ mb(files.db) }}</strong><span class="muted"><code>{{ db_path }}</code> · WAL {{ mb(files.wal) }}</span></div>
+  <div class="kpi"><small>저널 모드</small><strong>{{ journal|upper }}</strong><span class="muted">동시 읽기·쓰기</span></div>
+</section>
+<div class="db-groups">
+{% for g, tables in groups if tables %}
+  <section class="panel">
+    <div class="panel-head"><h2>{{ g }}</h2><span class="muted small">{{ tables|length }}개 테이블</span></div>
+    <table class="tbl compact">
+      <thead><tr><th>테이블</th><th class="num">행</th><th class="num">칸</th><th>마지막 기록</th></tr></thead>
+      <tbody>
+      {% for t in tables %}
+        <tr><td><code>{{ t }}</code></td><td class="num">{{ '{:,}'.format(counts[t]) }}</td><td class="num muted">{{ cols[t] }}</td>
+            <td class="muted small nowrap">{{ last[t] or '-' }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+{% endfor %}
+</div>
+{% endblock %}

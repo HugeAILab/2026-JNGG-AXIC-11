@@ -1,0 +1,13 @@
+# WeldSight 웹 — 버전 고정 (TODO.md 12.1). Python 3.11 이상.
+# 바꿀 때는 서버와 같은 Python 버전에서 설치·확인한 뒤 고친다.
+fastapi==0.116.1
+starlette==0.47.2
+uvicorn[standard]==0.35.0
+jinja2==3.1.6
+python-multipart==0.0.20
+itsdangerous==2.2.0
+httpx==0.28.1
+python-dotenv==1.1.0
+pillow==11.3.0
+Markdown==3.9
+fpdf2==2.8.5

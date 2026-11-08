@@ -1,0 +1,4 @@
+# Windows 에서 커밋해도 서버(Linux)에서 셸 스크립트가 깨지지 않도록 LF 고정
+*.sh text eol=lf
+*.py text eol=lf
+*.sql text eol=lf

@@ -1,0 +1,15 @@
+{% extends "portal/base.html" %}
+{% import "portal/_ui.html" as ui %}
+{% block title %}보고서 보관함{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>보고서 보관함</h1><p class="muted">생성 시점의 검사 결과를 보관합니다.</p></div></div>
+<form class="filters panel" method="get" action="{{ root }}/portal/reports">
+  <label>종류<select name="type"><option value="">전체</option><option value="DEFECT" {{ 'selected' if kind == 'DEFECT' }}>결함</option><option value="COMPLETION" {{ 'selected' if kind == 'COMPLETION' }}>완료</option></select></label>
+  <label>기간<select name="days"><option value="">전체</option><option value="7" {{ 'selected' if days == '7' }}>최근 7일</option><option value="30" {{ 'selected' if days == '30' }}>최근 30일</option></select></label>
+  <label>검색<input name="q" value="{{ q }}" placeholder="제목·보고서 번호"></label><button class="btn btn-primary" type="submit">조회</button>
+</form>
+<section class="panel"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>번호</th><th>종류</th><th>제목</th><th>생성 경로</th><th>항목</th><th>최다 유형</th><th>작성자·일시</th><th>PDF</th></tr></thead><tbody>
+{% for r in rows %}<tr><td>{{ r.report_no }}</td><td><span class="report-kind {{ 'defect' if r.type == 'DEFECT' else 'completion' }}">{{ '결함' if r.type == 'DEFECT' else '완료' }}</span></td><td><a href="{{ root }}/portal/reports/{{ r.id }}">{{ r.title }}</a></td><td>{% if r.upload_log_id %}<a href="{{ root }}/portal/inspections/uploads/{{ r.upload_log_id }}">업로드 #{{ r.upload_log_id }}</a>{% else %}목록 선택{% endif %}</td><td>{{ r.item_count }}</td><td>{{ type_name(r.top_defect_type) if r.top_defect_type else '-' }}</td><td>{{ r.author_name or '-' }} · {{ r.created_at[:16] }}</td><td><a href="{{ root }}/portal/reports/{{ r.id }}.pdf">다운로드</a></td></tr>
+{% else %}<tr><td colspan="8" class="empty">보고서가 없습니다. 전체 검사 목록에서 항목을 선택해 생성하세요.</td></tr>{% endfor %}
+</tbody></table></div><div class="list-foot">{{ ui.pager(pager) }}</div></section>
+{% endblock %}

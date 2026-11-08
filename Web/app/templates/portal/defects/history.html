@@ -1,0 +1,36 @@
+{% extends "portal/base.html" %}
+{% import "portal/_ui.html" as ui %}
+{% block title %}전체 이력 타임라인{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>전체 이력 타임라인</h1><p class="muted">모든 검사 건의 상태 변경 이력입니다. 최신 순.</p></div></div>
+
+<form class="filters panel" method="get" action="{{ root }}/portal/defects/history">
+  <label>이벤트<select name="action"><option value="">전체</option>
+    {% for k, l in event_labels.items() %}<option value="{{ k }}" {{ 'selected' if action == k }}>{{ l }}</option>{% endfor %}
+  </select></label>
+  <div class="filter-actions"><button class="btn btn-primary" type="submit">조회</button></div>
+</form>
+
+<section class="panel">
+  <div class="tbl-wrap">
+  <table class="tbl list">
+    <thead><tr><th>일시</th><th>이벤트</th><th>검사 코드</th><th>위치</th><th>작업 영역</th><th>변경</th><th>처리자</th><th>내용</th></tr></thead>
+    <tbody>
+    {% for e in rows %}
+      <tr class="rowlink" data-href="{{ root }}/portal/inspections/{{ e.inspection_id }}">
+        <td class="nowrap muted">{{ e.created_at[:16] }}</td>
+        <td class="nowrap"><b>{{ event_labels.get(e.action, e.action) }}</b></td>
+        <td class="nowrap"><a href="{{ root }}/portal/inspections/{{ e.inspection_id }}">{{ e.code }}</a></td>
+        <td class="nowrap">{{ e.block }} / {{ e.joint_no }}</td>
+        <td>{{ ui.domain(e.ai_domain) }}</td>
+        <td class="nowrap">{% if e.from_status %}<span class="muted small">{{ status_labels.get(e.from_status) }} →</span> {% endif %}{{ ui.status(e.to_status) }}</td>
+        <td class="nowrap">{{ e.actor_name or 'AI' }}</td>
+        <td class="ellipsis">{{ e.comment or '' }}</td>
+      </tr>
+    {% else %}<tr><td colspan="8" class="empty">이력이 없습니다.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <div class="list-foot"><span class="muted small">{{ pager.first }}–{{ pager.last }} / {{ pager.total }}건</span>{{ ui.pager(pager) }}</div>
+</section>
+{% endblock %}

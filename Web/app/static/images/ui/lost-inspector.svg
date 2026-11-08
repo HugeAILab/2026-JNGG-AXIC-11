@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 290" role="img" aria-labelledby="t">
+  <title id="t">검사 건을 찾지 못해 당황한 검사원 캐릭터</title>
+  <!-- WeldSight 안내용 캐릭터: 2D · 3등신 · 회색 톤 (팀 제작) -->
+  <defs>
+    <linearGradient id="hat" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#A8B3C2"/><stop offset="1" stop-color="#8A96A8"/>
+    </linearGradient>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#D5DCE5"/><stop offset="1" stop-color="#BCC6D2"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 바닥 그림자 -->
+  <ellipse cx="118" cy="278" rx="58" ry="7" fill="#E5E9EF"/>
+
+  <!-- 떠다니는 물음표 -->
+  <g fill="#A3AEBD" font-family="Pretendard, 'Malgun Gothic', sans-serif" font-weight="800">
+    <text x="176" y="44" font-size="34" transform="rotate(14 186 34)">?</text>
+    <text x="198" y="78" font-size="22" transform="rotate(-10 204 70)" fill="#C2CAD5">?</text>
+    <text x="34" y="52" font-size="24" transform="rotate(-16 40 44)" fill="#C2CAD5">?</text>
+  </g>
+
+  <!-- 다리 -->
+  <rect x="94" y="232" width="22" height="40" rx="11" fill="#8F9BAD"/>
+  <rect x="122" y="232" width="22" height="40" rx="11" fill="#8F9BAD"/>
+  <ellipse cx="104" cy="272" rx="15" ry="7" fill="#6B778A"/>
+  <ellipse cx="134" cy="272" rx="15" ry="7" fill="#6B778A"/>
+
+  <!-- 몸통 (작업복) -->
+  <path d="M74 176 Q74 136 119 136 Q164 136 164 176 L164 220 Q164 246 119 246 Q74 246 74 220 Z" fill="url(#body)"/>
+  <path d="M100 140 L119 168 L138 140" fill="none" stroke="#A3AEBD" stroke-width="4" stroke-linejoin="round"/>
+  <rect x="104" y="190" width="30" height="20" rx="5" fill="#E8ECF1"/>
+  <rect x="109" y="196" width="20" height="3" rx="1.5" fill="#B4BECB"/>
+  <rect x="109" y="202" width="13" height="3" rx="1.5" fill="#B4BECB"/>
+
+  <!-- 왼팔: 볼에 손을 대고 당황 -->
+  <path d="M80 168 Q56 160 62 128" fill="none" stroke="#BCC6D2" stroke-width="18" stroke-linecap="round"/>
+  <circle cx="63" cy="124" r="11" fill="#E8ECF1" stroke="#A3AEBD" stroke-width="2"/>
+
+  <!-- 오른팔: 돋보기를 들고 있음 -->
+  <path d="M158 176 Q182 186 190 166" fill="none" stroke="#BCC6D2" stroke-width="18" stroke-linecap="round"/>
+  <line x1="192" y1="160" x2="203" y2="138" stroke="#6B778A" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="209" cy="124" r="17" fill="#F4F6F9" fill-opacity=".85" stroke="#6B778A" stroke-width="5"/>
+  <path d="M200 117 Q204 111 211 111" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="190" cy="164" r="10" fill="#E8ECF1" stroke="#A3AEBD" stroke-width="2"/>
+
+  <!-- 머리 -->
+  <circle cx="119" cy="92" r="50" fill="#EEF1F5" stroke="#A3AEBD" stroke-width="2.5"/>
+
+  <!-- 안전모 -->
+  <path d="M71 80 Q72 34 119 32 Q166 34 167 80 Z" fill="url(#hat)"/>
+  <rect x="63" y="76" width="112" height="11" rx="5.5" fill="#7D899B"/>
+  <rect x="113" y="34" width="12" height="44" rx="5" fill="#9AA6B6"/>
+  <path d="M88 56 Q96 44 108 41" fill="none" stroke="#C7CFDA" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- 놀란 눈썹 -->
+  <path d="M90 97 Q97 92 104 95" fill="none" stroke="#6B778A" stroke-width="3" stroke-linecap="round"/>
+  <path d="M134 95 Q141 92 148 97" fill="none" stroke="#6B778A" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- 동그랗게 커진 눈 (작은 눈동자 = 당황) -->
+  <circle cx="98" cy="110" r="10" fill="#FFFFFF" stroke="#8F9BAD" stroke-width="2"/>
+  <circle cx="140" cy="110" r="10" fill="#FFFFFF" stroke="#8F9BAD" stroke-width="2"/>
+  <circle cx="99" cy="111" r="3.4" fill="#4B5563"/>
+  <circle cx="139" cy="111" r="3.4" fill="#4B5563"/>
+
+  <!-- 볼 -->
+  <ellipse cx="84" cy="124" rx="8" ry="4.5" fill="#D3D9E2"/>
+  <ellipse cx="154" cy="124" rx="8" ry="4.5" fill="#D3D9E2"/>
+
+  <!-- 물결 모양 입 -->
+  <path d="M108 130 Q112 125 116 130 Q120 135 124 130 Q128 125 132 130" fill="none" stroke="#6B778A" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- 땀방울 -->
+  <path d="M163 92 Q170 102 170 108 A7 7 0 0 1 156 108 Q156 102 163 92 Z" fill="#DDE3EA" stroke="#A3AEBD" stroke-width="1.8"/>
+  <path d="M170 116 Q174 122 174 125 A4 4 0 0 1 166 125 Q166 122 170 116 Z" fill="#DDE3EA" stroke="#A3AEBD" stroke-width="1.5"/>
+
+  <!-- 당황 효과선 -->
+  <g stroke="#B4BECB" stroke-width="3" stroke-linecap="round">
+    <line x1="56" y1="70" x2="46" y2="62"/>
+    <line x1="52" y1="84" x2="40" y2="82"/>
+    <line x1="182" y1="58" x2="190" y2="50"/>
+  </g>
+</svg>

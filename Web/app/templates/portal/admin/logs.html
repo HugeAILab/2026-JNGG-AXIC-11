@@ -1,0 +1,47 @@
+{% extends "portal/base.html" %}
+{% import "portal/_ui.html" as ui %}
+{% block title %}활동 로그{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>활동 로그</h1><p class="muted">로그인·업로드·AI·RAG·퀴즈 기록입니다. 행을 누르면 상세 내용을 볼 수 있습니다.</p></div>
+</div>
+<form class="panel filters" method="get">
+  <label>기간<select name="days"><option value="">전체</option>{% for d, l in [('1','오늘·24시간'),('7','7일'),('30','30일')] %}<option value="{{ d }}" {{ 'selected' if f.days == d }}>{{ l }}</option>{% endfor %}</select></label>
+  <label>종류<select name="type"><option value="">전체</option>{% for t in log_types %}<option {{ 'selected' if f.type == t }}>{{ t }}</option>{% endfor %}</select></label>
+  <label>수준<select name="level"><option value="">전체</option>{% for l in levels %}<option {{ 'selected' if f.level == l }}>{{ l }}</option>{% endfor %}</select></label>
+  <label>사용자<select name="user"><option value="">전체</option>{% for u in users %}<option value="{{ u.id }}" {{ 'selected' if f.user == u.id|string }}>{{ u.name }} ({{ u.username }})</option>{% endfor %}</select></label>
+  <label class="grow">키워드<input name="q" value="{{ f.q }}" placeholder="요약·행동 (예: AI_ERROR, INS-)"></label>
+  <div class="filter-actions"><button class="btn btn-primary" type="submit">조회</button><a class="btn btn-secondary" href="{{ root }}/portal/admin/logs">초기화</a></div>
+</form>
+<section class="panel">
+  <div class="tbl-wrap"><table class="tbl list logs">
+    <thead><tr><th>일시</th><th>종류</th><th>행동</th><th>사용자</th><th>요약</th><th>대상</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr class="log-row {{ 'has-detail' if r.detail_pretty }}" data-log="{{ r.id }}">
+        <td class="nowrap">{{ r.created_at }}</td>
+        <td><span class="lt lt-{{ r.display_type }} lv-{{ r.level }}">{{ r.display_type }}{% if r.level != 'INFO' %} · {{ r.level }}{% endif %}</span></td>
+        <td class="nowrap small">{{ r.display_action }}</td>
+        <td>{{ r.user_name or '-' }}</td>
+        <td>{% if r.log_type == 'UPLOAD' %}<a href="{{ root }}/portal/inspections/uploads/{{ r.id }}">{{ r.display_summary }}</a>{% else %}{{ r.display_summary }}{% endif %}</td>
+        <td class="nowrap">{% if r.target_type == 'inspection' and r.target_id %}<a href="{{ root }}/portal/inspections/{{ r.target_id }}">검사 #{{ r.target_id }}</a>{% elif r.target_type %}{{ r.target_type }} #{{ r.target_id }}{% else %}-{% endif %}</td>
+      </tr>
+      {% if r.detail_pretty %}<tr class="log-detail" data-for="{{ r.id }}" hidden><td colspan="6"><pre>{{ r.detail_pretty }}</pre>{% if r.ip %}<span class="muted small">IP {{ r.ip }}</span>{% endif %}</td></tr>{% endif %}
+    {% else %}
+      <tr><td colspan="6" class="empty">조건에 맞는 로그가 없습니다.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  <div class="list-foot"><span class="muted small">총 {{ pager.total }}건</span>{{ ui.pager(pager) }}</div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script nonce="{{ csp_nonce }}">
+document.addEventListener("click", function (e) {
+  var row = e.target.closest("tr.log-row.has-detail");
+  if (!row || e.target.closest("a")) return;
+  var d = document.querySelector('tr.log-detail[data-for="' + row.dataset.log + '"]');
+  if (d) { d.hidden = !d.hidden; row.classList.toggle("open", !d.hidden); }
+});
+</script>
+{% endblock %}

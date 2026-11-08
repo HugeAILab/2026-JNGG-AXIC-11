@@ -1,0 +1,192 @@
+{% from "_icons.html" import icon %}
+<!doctype html>
+<html lang="ko">
+<head>
+  {% include "_head.html" %}
+  <title>{{ app_name }} — {{ app_tagline }}</title>
+  <meta name="description" content="LNG 탱크 용접부 사진을 올리면 AI가 불량을 판정하고, 수정·재검사·보고서·교육까지 이어 주는 용접 품질 관리 포털">
+  <link rel="stylesheet" href="{{ static('css/landing.css') }}">
+  <script nonce="{{ csp_nonce }}">document.documentElement.classList.add("js");</script>
+</head>
+<body>
+
+<!-- 1. 내비게이션 -->
+<header class="nav" id="nav">
+  <div class="wrap nav-in">
+    <a class="logo" href="{{ root }}/"><span class="logo-mark">{{ icon('scan') }}</span>{{ app_name }}</a>
+    <nav class="nav-links" aria-label="섹션">
+      {# 페이지 섹션 순서와 같게: 문제(4) → 프로세스(5) → 기능(6) → 기술(7) #}
+      <a href="#problem">문제</a><a href="#process">프로세스</a><a href="#features">기능</a><a href="#tech">기술</a>
+    </nav>
+    {% if user %}
+      <a class="btn btn-sm btn-primary" href="{{ root }}/portal/dashboard">포털로 이동</a>
+    {% else %}
+      <a class="btn btn-sm btn-primary" href="{{ root }}/login">로그인</a>
+    {% endif %}
+  </div>
+</header>
+
+<!-- 2. 히어로 -->
+<section class="hero">
+  <div class="hero-grid-bg" aria-hidden="true"></div>
+  <div class="wrap hero-in">
+    <div class="hero-copy reveal">
+      <p class="eyebrow">{{ app_name }} · Quality Check — 2026 전남광주 기업 AX 혁신챌린지 · 소재·부품·장비</p>
+      <h1>용접부 사진 한 장에서<br><span class="grad">불량 판정·조치·보고서</span>까지</h1>
+      <p class="lead">{{ app_name }}(Quality Check)는 LNG 탱크 검사 사진을 올리면 AI가 용접·도장·보온재 등 작업별 불량을 찾고, 용접 불량은 한 번 더 자세히 분석해
+        설명·원인·방지 대책까지 작성합니다. 수정·재검사, 보고서·유사 사례·교육까지 한 포털에서 이어집니다.</p>
+      <div class="hero-cta">
+        <a class="btn btn-primary btn-lg" href="{{ root }}/login">데모 시작하기 {{ icon('arrow') }}</a>
+        <a class="btn btn-ghost btn-lg" href="#features">기능 둘러보기</a>
+      </div>
+      <ul class="hero-tags">
+        <li>{{ icon('check') }}AIStream 영역 분할 모델</li><li>{{ icon('check') }}용접 상세 분석</li><li>{{ icon('check') }}AgentStream LLM·RAG</li><li>{{ icon('check') }}사람이 최종 확정</li>
+      </ul>
+    </div>
+    <div class="hero-preview reveal" aria-hidden="true">
+      <div class="pv-card">
+        <div class="pv-top"><span></span><span></span><span></span><b>품질 현황</b></div>
+        <div class="pv-kpis">
+          <div><small>총 검사</small><strong>120</strong></div>
+          <div><small>불량률</small><strong>37.5%</strong></div>
+          <div><small>미결 불량</small><strong class="warn">19</strong></div>
+        </div>
+        <div class="pv-chart">
+          {% for h in [42, 65, 38, 80, 55, 70, 48, 90, 62, 75, 58, 84] %}<i style="--h:{{ h }}%"></i>{% endfor %}
+        </div>
+        <div class="pv-rows">
+          <div><span class="dot red"></span>INS-0042 · 기공 <em>조치 대기</em></div>
+          <div><span class="dot orange"></span>INS-0038 · 언더컷 <em>수정 중</em></div>
+          <div><span class="dot violet"></span>INS-0031 · 융합 불량 <em>재검사 대기</em></div>
+        </div>
+      </div>
+      <div class="pv-float">{{ icon('spark') }}<div><b>용접 상세 분석 → 설명·원인·방지</b><small>기공 0.86 · 비드 중앙부 · 근거 [1][2]</small></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 3. 숫자로 보는 효과 (목표치) -->
+<section class="stats">
+  <div class="wrap">
+    <div class="stat-grid">
+      <div class="stat reveal"><strong>10<small>장</small></strong><span>한 번에 올려 장별 판정</span></div>
+      <div class="stat reveal"><strong>1<small>클릭</small></strong><span>결함·완료 보고서 생성</span></div>
+      <div class="stat reveal"><strong>0<small>건</small></strong><span>추적되지 않는 미결 불량</span></div>
+      <div class="stat reveal"><strong>100<small>%</small></strong><span>AI 판정마다 검사자 확정</span></div>
+    </div>
+    <p class="note">* 서비스 설계 목표치이며 실측 성과가 아닙니다.</p>
+  </div>
+</section>
+
+<!-- 4. 현장의 문제 -->
+<section class="section" id="problem">
+  <div class="wrap">
+    <div class="sec-head reveal"><p class="eyebrow dark">현장의 문제</p><h2>용접 품질 관리는 아직 사람과 종이에 의존합니다</h2></div>
+    <div class="grid3">
+      {% for ic, t, d in [
+        ('scan', '판정 편차와 누락', '용접 이음부가 수천~수만 개. 육안 검사는 검사자 숙련도에 따라 판정이 달라집니다.'),
+        ('files', '흩어진 수정·재검사 이력', '불량 발견 후 이력이 엑셀·종이·메신저로 흩어져 미결 불량 추적과 재발 분석이 어렵습니다.'),
+        ('doc', '반복되는 보고서 작성', '검사 보고서를 매번 사람이 작성해 검사 시간보다 문서 시간이 더 깁니다.'),
+        ('search', '찾기 어려운 과거 사례', '비슷한 결함을 과거에 어떻게 처리했는지 찾기 어려워 같은 실수가 반복됩니다.'),
+        ('book', 'OJT에 의존하는 교육', '신입 검사자 교육이 현장 경험에 의존해, 숙련 인력이 떠나면 노하우가 끊깁니다.'),
+      ] %}
+      <article class="card reveal"><span class="card-ic">{{ icon(ic) }}</span><h3>{{ t }}</h3><p>{{ d }}</p></article>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- 5. 해결 프로세스 -->
+<section class="section alt" id="process">
+  <div class="wrap">
+    <div class="sec-head reveal"><p class="eyebrow dark">해결 프로세스</p><h2>업로드부터 합격까지, 한 화면에서 추적</h2></div>
+    <ol class="steps reveal">
+      {% for t, d in [('사진 업로드', '10여 장 한 번에'), ('AI 판정', 'A 선별 → 용접이면 B'), ('설명·원인·방지', 'RAG 근거로 작성'),
+                     ('검사자 확정', '사람이 최종 판정'), ('수정·개선', '조치 내용 기록'), ('재검사', 'AI + 검사자'), ('합격 종료', '이력 자동 보관')] %}
+      <li><span class="num">{{ loop.index }}</span><b>{{ t }}</b><small>{{ d }}</small></li>
+      {% endfor %}
+    </ol>
+  </div>
+</section>
+
+<!-- 6. 핵심 기능 7가지 -->
+<section class="section" id="features">
+  <div class="wrap">
+    <div class="sec-head reveal"><p class="eyebrow dark">핵심 기능</p><h2>검사·관리·지식이 하나로 이어지는 7가지 기능</h2></div>
+    <div class="feat-grid">
+      {% for ic, t, d in [
+        ('camera', 'AI 불량 검사', '모델 A가 용접·도장·보온재·케이블·바인딩·절단 불량 위치를 찾고, 용접 불량이면 모델 B가 결함 10종별로 자세히 분석'),
+        ('spark', 'AI 불량 설명', '불량마다 설명·원인·방지 대책을 자동 작성. 용접은 전문 자료와 과거 사례(RAG) 근거를 붙임'),
+        ('flow', '불량 관리 워크플로', '불량 → 수정·개선 → 재검사 → 합격까지 상태와 이력을 한 곳에서 추적'),
+        ('chart', '품질 대시보드', '불량률, 미결 건수, 결함 유형·구역·기간별 통계를 한눈에'),
+        ('doc', '보고서 자동 작성', '여러 결함을 묶어 결함·완료 보고서를 즉시 생성. 재발·원인 분석 자동 포함'),
+        ('search', '유사 결함 사례 검색', '과거 비슷한 결함과 그때의 원인·조치를 BM25로 바로 검색'),
+        ('book', '교육 + 퀴즈', '실제 불량 사례를 참조한 "결함 맞추기" 퀴즈로 신입 검사자 교육'),
+      ] %}
+      <article class="feat reveal"><span class="feat-ic">{{ icon(ic) }}</span><h3><em>{{ '%02d' % loop.index }}</em>{{ t }}</h3><p>{{ d }}</p></article>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- 7. 아키텍처 -->
+<section class="section dark" id="tech">
+  <div class="wrap">
+    <div class="sec-head reveal"><p class="eyebrow">아키텍처</p><h2>오픈플랫폼 AI를 서버에서 안전하게 연결</h2>
+      <p class="sub">브라우저는 우리 서버와만 통신하고, AI 서빙 주소와 API Key는 화면과 저장소에 노출되지 않습니다.</p></div>
+    <div class="arch reveal">
+      <div class="node">{{ icon('globe') }}<b>사용자 브라우저</b><small>PC · 태블릿</small></div>
+      <div class="link"><span>HTTPS</span></div>
+      <div class="node main">{{ icon('server') }}<b>{{ app_name }} 웹 서버</b><small>FastAPI · SQLite · AI 파이프라인 · 불량 관리 · 보고서 · BM25</small></div>
+      <div class="link"><span>서버 → 서버</span></div>
+      <div class="node-col">
+        <div class="node ai">{{ icon('scan') }}<b>모델 A · AIStream</b><small>MaskDINO 영역 분할 · 작업별 불량 후보와 위치</small></div>
+        <div class="node ai">{{ icon('cpu') }}<b>모델 B · 용접 상세 분석</b><small>용접 결함 10종별 신뢰도 · 키워드 · 위치</small></div>
+        <div class="node ai">{{ icon('bot') }}<b>AgentStream</b><small>LLM · RAG 지식베이스 · 설명·원인·방지 · 보고서 요약</small></div>
+      </div>
+    </div>
+    <div class="ai3 reveal">
+      <h3>AI 파이프라인</h3>
+      <ol>
+        <li><b>① 모델 A 선별</b><span>용접·도장·보온재·케이블·바인딩·절단 중 어떤 불량인지와 위치(마스크)를 찾고</span></li>
+        <li><b>② 용접이면 모델 B</b><span>용접 결함 10종별 신뢰도와 관찰 키워드로 자세히 분석한 뒤 RAG로 근거를 찾아</span></li>
+        <li><b>③ 설명·원인·방지</b><span>근거 번호가 붙은 초안을 작성 — 검사자가 확인·확정</span></li>
+      </ol>
+      <p class="sub">모델 B나 LLM이 응답하지 않아도 모델 A 결과·템플릿 설명·수동 판정으로 업무가 멈추지 않습니다.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 8. 확산 가능성 -->
+<section class="section">
+  <div class="wrap center">
+    <div class="sec-head reveal"><p class="eyebrow dark">확산 가능성</p><h2>판정 모델만 바꾸면 다른 용접 현장에도</h2></div>
+    <ul class="chips reveal">
+      {% for c in ['LNG 탱크', '배관', '선체 블록', '압력용기', '해양플랜트 구조물', '교량·철골', '발전 설비'] %}<li>{{ c }}</li>{% endfor %}
+    </ul>
+  </div>
+</section>
+
+<!-- 9. CTA -->
+<section class="cta">
+  <div class="wrap cta-in reveal">
+    <div>
+      <h2>지금 데모 계정으로 체험해 보세요</h2>
+      <p>로그인 화면에 역할별 데모 계정(관리자·품질 관리자·검사자·용접 담당)이 안내되어 있습니다. 모든 데이터는 합성 샘플입니다.</p>
+    </div>
+    <a class="btn btn-white btn-lg" href="{{ root }}/login">데모 로그인 {{ icon('arrow') }}</a>
+  </div>
+</section>
+
+<!-- 10. 푸터 -->
+<footer class="foot">
+  <div class="wrap foot-in">
+    <span>© 2026 {{ team_name }} ({{ team_desc }}) · 2026 전남광주 기업 AX 혁신챌린지 (A 트랙 · 소재·부품·장비)</span>
+    <span class="foot-links">{% if github_url %}<a href="{{ github_url }}" target="_blank" rel="noopener">GitHub</a>{% endif %}</span>
+  </div>
+</footer>
+
+<script src="{{ static('js/landing.js') }}" defer></script>
+{% include "_version.html" %}
+</body>
+</html>

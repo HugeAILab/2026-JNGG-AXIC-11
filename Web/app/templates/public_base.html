@@ -1,0 +1,14 @@
+{% from "_icons.html" import icon %}
+<!doctype html>
+<html lang="ko">
+<head>
+  {% include "_head.html" %}
+  <title>{% block title %}{{ app_name }}{% endblock %}</title>
+  <link rel="stylesheet" href="{{ static('css/portal.css') }}">
+</head>
+<body class="public">
+<header class="topbar"><a class="brand" href="{{ root }}/"><span class="logo-mark">{{ icon('scan') }}</span>{{ app_name }}</a></header>
+<main class="content narrow">{% block content %}{% endblock %}</main>
+{% include "_version.html" %}
+</body>
+</html>

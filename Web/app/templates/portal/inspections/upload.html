@@ -1,0 +1,74 @@
+{% extends "portal/base.html" %}
+{% block title %}사진 업로드 검사{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>사진 업로드 검사</h1>
+    <p class="muted">사진 여러 장을 한 번에 올리면 저장 후 사진마다 AI 판정(모델 A 선별 → 용접 불량이면 모델 B 상세)을 진행합니다.</p></div>
+  <div class="head-actions">
+    <span class="badge {{ 'sample' if is_mock_mode }}" title="모델 A">{{ '모델 A · 모의' if is_mock_mode else '모델 A · AIStream' }}</span>
+    <span class="badge {{ 'sample' if is_mock_mode }}" title="모델 B">{{ ('모델 B · 모의' if is_mock_mode else '모델 B · 연결') if has_b else '모델 B · 미연결 (건너뜀)' }}</span>
+    <a class="btn btn-secondary" href="{{ root }}/portal/inspections/uploads">업로드 이력</a>
+  </div>
+</div>
+
+{% if not can_upload %}<div class="alert info">사진 업로드는 관리자·품질 관리자·품질 검사자 계정에서 할 수 있습니다. 지금 계정은 조회만 할 수 있습니다.</div>{% endif %}
+
+<form id="upload-form" class="upload-layout" data-max="{{ max_files }}" novalidate>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <section class="panel">
+    <div class="panel-head"><h2>① 공통 정보</h2><span class="muted small">이번에 올리는 사진 모두에 적용</span></div>
+    <div class="form-grid">
+      <label class="fg wide"><span>작업 종류 <b class="req">*</b></span>
+        <div class="seg-pick" role="radiogroup" aria-label="작업 종류">
+          {% for w in work_types %}<label><input type="radio" name="work_type" value="{{ w }}" {{ 'checked' if loop.first }}><span>{{ work_labels[w] }}</span></label>{% endfor %}
+        </div>
+        <small class="muted">참고 정보입니다. 실제 판정 분기는 모델 A 결과로 합니다.</small>
+      </label>
+      <label class="fg"><span>탱크 <b class="req">*</b></span>
+        <select name="tank_no" required>{% for t in tanks %}<option>{{ t }}</option>{% endfor %}</select></label>
+      <label class="fg"><span>블록 <b class="req">*</b></span><input name="block" required maxlength="20" placeholder="예: B-07"></label>
+      <label class="fg"><span>프로젝트</span><input name="project" maxlength="40" value="LNG-PJT-A"></label>
+      <label class="fg weld-only"><span>용접법 <b class="req">*</b></span>
+        <select name="weld_process">{% for p in processes %}<option>{{ p }}</option>{% endfor %}</select></label>
+      <label class="fg weld-only"><span>용접 자세</span>
+        <select name="weld_position"><option value="">-</option>{% for p in positions %}<option>{{ p }}</option>{% endfor %}</select></label>
+      <label class="fg weld-only"><span>용접사</span><input name="welder" maxlength="30" placeholder="예: W-07"></label>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2>② 사진</h2><span class="muted small" id="pick-summary">선택한 사진 없음</span></div>
+    <label class="dropzone {{ 'disabled' if not can_upload }}" id="dropzone">
+      <input type="file" id="file-input" accept="image/jpeg,image/png" multiple {{ 'disabled' if not can_upload }}>
+      <span class="dz-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg></span>
+      <b>사진을 여기에 끌어다 놓거나 눌러서 고르세요</b>
+      <small class="muted">JPEG·PNG · 최대 {{ max_files }}장 · 장당 10 MiB, 2천만 픽셀 이하 · 여러 번 나눠 추가할 수 있습니다</small>
+    </label>
+    <div class="pick-toolbar" id="pick-toolbar" hidden>
+      <span class="muted small">위치 번호(용접은 이음부 J-번호)는 비우면 자동으로 붙습니다.</span>
+      <button type="button" class="link-btn" id="clear-all">모두 지우기</button>
+    </div>
+    <ul class="photo-grid" id="photo-grid" aria-live="polite"></ul>
+  </section>
+
+  <div class="submit-bar">
+    <div class="submit-info"><b id="submit-count">0장</b><span class="muted small" id="submit-status">사진을 고르면 검사를 시작할 수 있습니다.</span>
+      <span class="bar submit-progress" hidden id="submit-progress"><i style="width:0%"></i></span></div>
+    <button class="btn btn-primary" id="submit-btn" type="submit" disabled>업로드하고 AI 판정 시작</button>
+  </div>
+  <p class="alert error" id="upload-error" role="alert" hidden></p>
+</form>
+
+<template id="photo-card">
+  <li class="photo-card">
+    <div class="pc-img"><img alt=""><span class="pc-state"></span>
+      <button type="button" class="pc-remove" aria-label="이 사진 빼기" title="빼기">×</button></div>
+    <div class="pc-body">
+      <div class="pc-name"></div>
+      <div class="pc-meta muted small"></div>
+      <input class="pc-joint" maxlength="20" placeholder="위치 번호 (자동)" aria-label="위치 번호">
+    </div>
+  </li>
+</template>
+{% endblock %}
+{% block scripts %}<script src="{{ static('js/upload.js') }}" defer></script>{% endblock %}

@@ -1,0 +1,90 @@
+{% extends "portal/base.html" %}
+{% import "portal/_ui.html" as ui %}
+{% block title %}전체 검사 목록{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>전체 검사 목록</h1>
+    <p class="muted">총 {{ pager.total }}건 · 행을 누르면 검사 상세로 이동합니다.</p>
+  </div>
+</div>
+
+{% if not_found_id is not none %}
+<section class="panel lost" role="status">
+  {# 팀 제작 캐릭터(PNG). 파일이 없으면 예전 SVG 로 대신 표시 #}
+  <img class="lost-img" src="{{ static('images/ui/lost-inspector.png') }}" alt="검사 건을 찾지 못해 당황한 검사원 캐릭터"
+       width="150" height="196" data-fallback="{{ static('images/ui/lost-inspector.svg') }}">
+  <div class="lost-text">
+    <h2>앗, 검사 번호 {{ not_found_id }}번을 찾을 수 없어요</h2>
+    <p class="muted">없는 번호이거나 주소가 잘못 입력된 것 같아요. 아래 목록에서 검사 코드·위치로 찾아보세요.</p>
+    <form class="lost-search" method="get" action="{{ root }}/portal/inspections">
+      <input name="q" placeholder="검사 코드·위치·소견으로 검색" aria-label="검사 검색">
+      <button class="btn btn-primary" type="submit">찾기</button>
+      <a class="btn btn-secondary" href="{{ root }}/portal/inspections">전체 목록</a>
+    </form>
+  </div>
+</section>
+{% endif %}
+
+<form class="filters panel" method="get" action="{{ root }}/portal/inspections">
+  <label>기간<select name="days">
+    {% for v, l in [('', '전체'), ('7', '최근 7일'), ('30', '최근 30일'), ('90', '최근 90일')] %}<option value="{{ v }}" {{ 'selected' if f.days == v }}>{{ l }}</option>{% endfor %}
+  </select></label>
+  <label>상태<select name="status"><option value="">전체</option>
+    {% for s in ['PENDING','AI_DONE','DEFECT','REWORK','REINSPECT','PASS','REJECT'] %}<option value="{{ s }}" {{ 'selected' if f.status == s }}>{{ status_labels[s] }}</option>{% endfor %}
+  </select></label>
+  <label>작업 영역<select name="domain"><option value="">전체</option>
+    {% for d in domains %}<option value="{{ d }}" {{ 'selected' if f.domain == d }}>{{ domain_labels[d] }}</option>{% endfor %}
+  </select></label>
+  <label>결함 유형<select name="dtype"><option value="">전체</option>
+    {% for d, ts in types_by_domain %}<optgroup label="{{ domain_labels[d] }}">
+      {% for t in ts %}<option value="{{ t.code }}" {{ 'selected' if f.dtype == t.code }}>{{ t.name_ko }}</option>{% endfor %}
+    </optgroup>{% endfor %}
+  </select></label>
+  <label>탱크<select name="tank"><option value="">전체</option>{% for t in options.tanks %}<option {{ 'selected' if f.tank == t }}>{{ t }}</option>{% endfor %}</select></label>
+  <label>블록<select name="block"><option value="">전체</option>{% for b in options.blocks %}<option {{ 'selected' if f.block == b }}>{{ b }}</option>{% endfor %}</select></label>
+  <label>용접법<select name="process"><option value="">전체</option>{% for p in options.processes %}<option {{ 'selected' if f.process == p }}>{{ p }}</option>{% endfor %}</select></label>
+  <label class="grow">검색<input name="q" value="{{ f.q }}" placeholder="검사 코드·위치·소견·AI 분류명"></label>
+  <label class="check"><input type="checkbox" name="review" value="1" {{ 'checked' if f.review == '1' }}> 검토 필요만</label>
+  <label>정렬<select name="sort">
+    {% for v, l in [('date', '최근 검사순'), ('old', '오래된 순'), ('status', '처리 우선순'), ('conf', 'AI 신뢰도 낮은 순')] %}<option value="{{ v }}" {{ 'selected' if (f.sort or 'date') == v }}>{{ l }}</option>{% endfor %}
+  </select></label>
+  <div class="filter-actions"><button class="btn btn-primary" type="submit">조회</button>
+    <a class="btn btn-secondary" href="{{ root }}/portal/inspections">초기화</a></div>
+</form>
+
+<section class="panel">
+  <div class="tbl-wrap">
+  <table class="tbl list">
+    <thead><tr>{% if can_report %}<th><input type="checkbox" id="report-page-all" aria-label="이 쪽 전체 선택"></th>{% endif %}
+      <th>검사 코드</th><th>사진</th><th>탱크 / 블록 / 위치</th><th>작업 영역</th><th>용접법</th>
+      <th>AI 판정</th><th>확정</th><th>결함 유형</th><th>상태</th><th class="num">재작업</th><th>검사일</th><th>담당</th>
+    </tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr class="rowlink" data-href="{{ root }}/portal/inspections/{{ r.id }}">
+        {% if can_report %}<td><input type="checkbox" class="report-row" value="{{ r.id }}" aria-label="{{ r.code }} 선택"></td>{% endif %}
+        <td class="nowrap"><a href="{{ root }}/portal/inspections/{{ r.id }}">{{ r.code }}</a>{% if r.is_sample %} <span class="badge sample sm">샘플</span>{% endif %}</td>
+        <td>{{ ui.thumb(r) }}</td>
+        <td class="nowrap">{{ r.tank_no }} / {{ r.block }} / {{ r.joint_no }}</td>
+        <td>{{ ui.domain(r.domain) }}</td>
+        <td>{{ r.weld_process if r.weld_process != '-' else '' }}</td>
+        <td>{{ ui.ai_cell(r) }}</td>
+        <td>{% if r.final_is_defect is none %}<span class="muted">미확정</span>{% elif r.final_is_defect %}<span class="txt-red">불량</span>{% else %}정상{% endif %}</td>
+        <td>{{ type_name(r.defect_type) if r.defect_type else '' }}</td>
+        <td>{{ ui.status(r.status) }}</td>
+        <td class="num">{{ r.rework_count or '' }}</td>
+        <td class="nowrap muted">{{ r.inspected_at[:10] }}</td>
+        <td class="nowrap">{{ r.inspector_name or '' }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="{{ 13 if can_report else 12 }}" class="empty">조건에 맞는 검사 건이 없습니다. 필터를 바꿔 보세요.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <div class="list-foot"><span class="muted small">{{ pager.first }}–{{ pager.last }} / {{ pager.total }}건</span>{{ ui.pager(pager) }}</div>
+</section>
+{% if can_report %}<div id="report-selection-bar" class="panel" style="position:sticky;bottom:0;z-index:5;display:flex;align-items:center;gap:1rem;padding:1rem;box-shadow:0 -3px 12px #0002"><b id="report-selected-count">0건 선택됨</b><button class="btn btn-secondary" id="report-clear" type="button">선택 해제</button><button class="btn btn-primary" id="report-open" type="button" style="margin-left:auto" disabled>보고서 생성</button></div>{% include "portal/_report_modal.html" %}{% endif %}
+{% endblock %}
+{% block scripts %}{% if can_report %}<script src="{{ static('js/report_modal.js') }}" defer></script>{% endif %}{% endblock %}

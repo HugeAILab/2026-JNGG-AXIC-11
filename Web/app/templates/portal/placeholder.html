@@ -1,0 +1,12 @@
+{% extends "portal/base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}{{ item.label }}{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>{{ item.label }}</h1></div></div>
+<section class="panel empty-state">
+  <span class="es-ic">{{ icon('tool') }}</span>
+  <h2>준비 중인 화면입니다</h2>
+  <p class="muted">이 화면은 개발 계획 <b>{{ item.stage }}단계</b>에서 만들어집니다. 메뉴 구조와 권한 확인을 위해 자리만 열어 두었습니다.</p>
+  <a class="btn btn-secondary" href="{{ root }}/portal/dashboard">대시보드로</a>
+</section>
+{% endblock %}

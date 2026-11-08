@@ -1,0 +1,68 @@
+{% from "_icons.html" import icon %}
+<!doctype html>
+<html lang="ko">
+<head>
+  {% include "_head.html" %}
+  <title>{% block title %}{{ crumb[2].label if crumb else '포털' }}{% endblock %} · {{ app_name }}</title>
+  <link rel="stylesheet" href="{{ static('css/portal.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body class="portal">
+{# 상단 바: 로고 + 대메뉴 + 알림 + 사용자 (TODO.md 5.3) #}
+<header class="topbar">
+  <button class="icon-btn side-toggle" type="button" aria-label="메뉴 열기" data-toggle-sidebar>{{ icon('menu') }}</button>
+  <a class="brand" href="{{ root }}/portal/dashboard"><span class="logo-mark">{{ icon('scan') }}</span>{{ app_name }}</a>
+  <nav class="topnav" aria-label="대메뉴">
+    {% for top in menu %}
+      <a href="{{ root }}{{ top.href }}" class="{{ 'on' if top.key == active_top }}">{{ top.label }}</a>
+    {% endfor %}
+  </nav>
+  <div class="top-right">
+    <a class="bell" href="{{ root }}/portal/defects?status=DEFECT" title="조치 대기 + 재검사 대기">{{ icon('bell') }}{% if bell %}<b>{{ bell }}</b>{% endif %}</a>
+    <details class="usermenu">
+      <summary><span class="avatar">{{ user.name[:1] }}</span><span class="uname">{{ user.name }}</span></summary>
+      <div class="usermenu-pop">
+        <div class="um-head"><b>{{ user.name }}</b><small>{{ user.username }} · {{ role_labels[user.role] }}</small></div>
+        <form method="post" action="{{ root }}/logout">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit" class="um-item">{{ icon('logout') }}로그아웃</button>
+        </form>
+      </div>
+    </details>
+  </div>
+</header>
+
+<div class="layout">
+  {# 좌측 중메뉴: 현재 대메뉴의 그룹·링크 #}
+  <aside class="sidebar" id="sidebar">
+    {% for top in menu if top.key == active_top %}
+      <div class="side-title">{{ top.label }}</div>
+      {% for g in top.groups %}
+        <div class="side-group">
+          <div class="side-group-label">{{ g.label }}</div>
+          {% for it in g['items'] %}{# g.items 는 dict 의 .items() 메서드로 해석되므로 [] 로 접근 #}
+            {% set key = top.key ~ '.' ~ it.key %}
+            {% if it.marker %}
+              <a class="side-link marker {{ 'on' if key == active }}" href="{{ root }}{{ it.url }}" title="목록에서 항목을 고르면 열립니다">{{ it.label }}</a>
+            {% else %}
+              <a class="side-link {{ 'on' if key == active }}" href="{{ root }}{{ it.url }}">{{ it.label }}</a>
+            {% endif %}
+          {% endfor %}
+        </div>
+      {% endfor %}
+    {% endfor %}
+  </aside>
+  <div class="scrim" data-toggle-sidebar></div>
+
+  <main class="content">
+    {% if crumb %}
+      <nav class="crumb" aria-label="현재 위치">{{ crumb[0].label }} <span>›</span> {{ crumb[1].label }} <span>›</span> <b>{{ crumb[2].label }}</b></nav>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+<script src="{{ static('js/portal.js') }}" defer></script>
+{% block scripts %}{% endblock %}
+{% include "_version.html" %}
+</body>
+</html>

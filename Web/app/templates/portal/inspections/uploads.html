@@ -1,0 +1,33 @@
+{% extends "portal/base.html" %}
+{% import "portal/_ui.html" as ui %}
+{% block title %}업로드 이력{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>업로드 이력</h1><p class="muted">{{ '모든 사용자의 업로드' if all_users else '내가 올린 업로드' }} · 업로드 1회 = UPLOAD 로그 1행. 누르면 결과 검토 화면으로 갑니다.</p></div>
+  <div class="head-actions"><a class="btn btn-primary" href="{{ root }}/portal/inspections/upload">사진 업로드</a></div>
+</div>
+<section class="panel">
+  <div class="tbl-wrap"><table class="tbl list">
+    <thead><tr><th></th><th>업로드</th><th>요약</th><th>올린 사람</th><th class="num">사진</th><th>AI 판정</th><th class="num">불량 추정</th><th class="num">확정 대기</th><th>일시</th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      {% set c = r.detail.common or {} %}
+      <tr class="rowlink" data-href="{{ root }}/portal/inspections/uploads/{{ r.id }}">
+        <td>{% if r.cover_thumb %}<img class="thumb thumb-sm" src="{{ r.cover_thumb }}" alt="" loading="lazy">{% else %}<span class="thumb thumb-sm thumb-ph dm-bg-{{ c.work_type if c.work_type in domain_labels else 'WELD' }}"><b>샘플</b></span>{% endif %}</td>
+        <td><a href="{{ root }}/portal/inspections/uploads/{{ r.id }}">#{{ r.id }}</a></td>
+        <td class="ellipsis" title="{{ r.summary }}">{{ r.summary }}</td>
+        <td>{{ r.user_name or '-' }}</td>
+        <td class="num">{{ r.n }}{% if r.detail.photo_count and r.detail.photo_count != r.n %}<span class="muted small"> / {{ r.detail.photo_count }}</span>{% endif %}</td>
+        <td>{% if r.n and r.n_done >= r.n %}<span class="st st-AI_DONE">완료</span>{% elif r.n %}<span class="st st-PENDING">{{ r.n_done }}/{{ r.n }} 진행 중</span>{% else %}<span class="muted">-</span>{% endif %}</td>
+        <td class="num {{ 'txt-red' if r.n_defect }}">{{ r.n_defect }}</td>
+        <td class="num">{{ r.n_open }}</td>
+        <td class="nowrap">{{ r.created_at[:16] }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="9" class="empty">업로드 기록이 없습니다. <a href="{{ root }}/portal/inspections/upload">사진 업로드</a>로 시작하세요.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  <div class="list-foot"><span class="muted small">총 {{ pager.total }}건</span>{{ ui.pager(pager) }}</div>
+</section>
+{% endblock %}

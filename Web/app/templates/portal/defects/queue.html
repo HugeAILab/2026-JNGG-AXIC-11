@@ -1,0 +1,60 @@
+{% extends "portal/base.html" %}
+{% import "portal/_ui.html" as ui %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>{{ title }}</h1>
+    <p class="muted">{% if view == 'CLOSED' %}조치·재검사를 거쳐 합격했거나 폐기된 불량입니다.{% else %}처리 기한이 가까운 순서입니다. 기한이 지난 건은 빨간색으로 표시됩니다.{% endif %}</p></div>
+</div>
+
+<nav class="tabs" aria-label="불량 처리 단계">
+  {% for k in ['DEFECT', 'REWORK', 'REINSPECT', 'CLOSED'] %}
+    <a href="{{ root }}/portal/defects?status={{ k }}" class="{{ 'on' if k == view }}">{{ titles[k] }} <b>{{ counts[k] }}</b></a>
+  {% endfor %}
+</nav>
+
+<form class="filters panel" method="get" action="{{ root }}/portal/defects">
+  <input type="hidden" name="status" value="{{ view }}">
+  <label>작업 영역<select name="domain"><option value="">전체</option>
+    {% for d in domains %}<option value="{{ d }}" {{ 'selected' if f.domain == d }}>{{ domain_labels[d] }}</option>{% endfor %}
+  </select></label>
+  <label class="grow">검색<input name="q" value="{{ f.q }}" placeholder="검사 코드·위치·소견"></label>
+  <div class="filter-actions"><button class="btn btn-primary" type="submit">조회</button></div>
+</form>
+
+<section class="panel">
+  <div class="tbl-wrap">
+  <table class="tbl list">
+    <thead><tr>
+      <th>검사 코드</th><th>위치</th><th>작업 영역</th><th>결함 유형</th><th>심각도</th><th>상태</th>
+      {% if view == 'CLOSED' %}<th>종결일</th><th class="num">재작업</th><th>조치 결과</th>
+      {% else %}<th>담당</th><th>처리 기한</th><th class="num">재작업</th><th>최근 변경</th>{% endif %}
+    </tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr class="rowlink {{ 'overdue' if r.overdue }}" data-href="{{ root }}/portal/inspections/{{ r.id }}">
+        <td class="nowrap"><a href="{{ root }}/portal/inspections/{{ r.id }}">{{ r.code }}</a></td>
+        <td class="nowrap">{{ r.tank_no }} / {{ r.block }} / {{ r.joint_no }}</td>
+        <td>{{ ui.domain(r.domain) }}</td>
+        <td>{{ type_name(r.defect_type) }}</td>
+        <td><span class="sev sev-{{ r.severity }}">{{ r.severity or '-' }}</span></td>
+        <td>{{ ui.status(r.status) }}</td>
+        {% if view == 'CLOSED' %}
+          <td class="nowrap muted">{{ (r.closed_at or '')[:10] }}</td><td class="num">{{ r.rework_count }}</td>
+          <td class="ellipsis">{{ r.action_result or '' }}</td>
+        {% else %}
+          <td class="nowrap">{{ r.assignee or '-' }}</td>
+          <td class="nowrap {{ 'txt-red' if r.overdue }}">{{ r.due_date or '-' }}{{ ' 초과' if r.overdue }}</td>
+          <td class="num">{{ r.rework_count }}</td>
+          <td class="nowrap muted">{{ r.updated_at[:16] }}</td>
+        {% endif %}
+      </tr>
+    {% else %}
+      <tr><td colspan="10" class="empty">해당 단계의 불량이 없습니다.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <div class="list-foot"><span class="muted small">{{ pager.first }}–{{ pager.last }} / {{ pager.total }}건 · 조치 등록·재검사는 3단계에서 상세 화면에 추가됩니다.</span>{{ ui.pager(pager) }}</div>
+</section>
+{% endblock %}

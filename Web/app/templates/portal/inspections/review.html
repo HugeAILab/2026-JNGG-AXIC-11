@@ -1,0 +1,42 @@
+{% extends "portal/base.html" %}
+{% block title %}업로드 결과 #{{ log.id }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ static('css/segmentation.css') }}">{% endblock %}
+{% block content %}
+{% set c = log.detail.common or {} %}
+<div class="page-head">
+  <div><h1>업로드 결과 <span class="muted">#{{ log.id }}</span></h1>
+    <p class="muted">{{ log.summary }} · {{ log.user_name or '-' }} · {{ log.created_at[:16] }}
+      {% if c.weld_process and c.weld_process != '-' %} · {{ c.weld_process }}{% endif %}</p></div>
+  <div class="head-actions">
+    <a class="btn btn-secondary" href="{{ root }}/portal/inspections/uploads">업로드 이력</a>
+    <a class="btn btn-secondary" href="{{ root }}/portal/inspections/upload">새 업로드</a>
+    {% if can_confirm %}<button class="btn btn-primary" id="confirm-all" type="button" disabled>AI 결과대로 전체 확정</button>{% endif %}
+  </div>
+</div>
+
+{% for r in existing_reports %}<div class="alert info"><a href="{{ root }}/portal/reports/{{ r.id }}">보고서 {{ r.report_no }} · {{ r.title }}</a></div>{% endfor %}
+<section class="panel review-progress" id="review-root" data-log="{{ log.id }}" data-confirm="{{ 1 if can_confirm else 0 }}">
+  <div class="rp-head"><b id="rp-text">AI 판정 상태 확인 중…</b><span class="muted small" id="rp-sub"></span></div>
+  <span class="bar rp-bar"><i id="rp-bar" style="width:0%"></i></span>
+  <p class="muted small">사진마다 모델 A가 먼저 작업 영역·불량 후보를 찾고, 용접 불량이면 모델 B가 세부 유형을 봅니다.
+    <span class="warn-ic">⚠</span> 노란 표시는 검토가 필요한 건(검출 없음, 신뢰도 0.6 미만, A·B 판정 다름, 용접 세부 분석 없음, 사진 품질 경고)입니다. 점수는 모델 출력값이며 정답 확률이 아닙니다.</p>
+</section>
+
+<ul class="review-grid" id="review-grid" aria-live="polite"></ul>
+
+<dialog class="seg-dialog" id="seg-dialog">
+  <div class="sd-head"><b id="sd-title">분할 결과</b><button type="button" class="icon-btn" data-close aria-label="닫기">×</button></div>
+  <p class="muted small" id="sd-status"></p>
+  {% include "portal/inspections/_seg_viewer.html" %}
+</dialog>
+
+<template id="type-options">
+  {% for d, types in types_by_domain %}<optgroup label="{{ domain_labels.get(d) }}">{% for t in types %}<option value="{{ t.code }}">{{ t.name_ko }}</option>{% endfor %}</optgroup>{% endfor %}
+</template>
+{% if can_confirm %}{% include "portal/_report_modal.html" %}{% endif %}
+{% endblock %}
+{% block scripts %}
+<script src="{{ static('js/report_modal.js') }}" defer></script>
+<script src="{{ static('js/segmentation.js') }}" defer></script>
+<script src="{{ static('js/review.js') }}" defer></script>
+{% endblock %}

@@ -1,0 +1,58 @@
+{% extends "portal/base.html" %}
+{% block title %}{{ {'index':'교육 과정 전체','article':article.title if article is defined else '', 'quiz_list':'퀴즈 모아 풀기','quiz_detail':'퀴즈 풀기','review':'답안 비교','result':'퀴즈 결과','history':'나의 퀴즈 기록'}.get(view) }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ static('css/learning.css') }}">{% endblock %}
+{% block content %}
+<div class="learning-page">
+{% if view == 'index' %}
+  <div class="page-head"><div><h1>교육 과정 전체</h1><p class="muted">용접 결함 9개 단원과 검수 자료 4편 · 그림은 교육용 모식도입니다.</p></div><a class="btn btn-primary" href="{{ root }}/portal/learning/quiz">퀴즈 풀기</a></div>
+  <p class="learn-note">실제 판정과 보수 조건은 적용 기준과 검사 결과를 확인하세요.</p>
+  {% for cls in classes %}
+    <h2 class="learn-section">{{ cls.title }}</h2><p class="muted">{{ cls.description }}</p>
+    <div class="learn-grid">
+    {% for item in cls.articles %}
+      {% set code = item.slug.removeprefix('learning-') %}
+      {% set is_lesson = code.startswith('l0') %}
+      <a class="learn-card" href="{{ root }}/portal/learning/{{ code.upper() if is_lesson else 'material/' ~ code }}">
+        {% if is_lesson %}<img src="{{ root }}/static/learning/images/lesson_{{ ['crack','porosity','undercut','lack_of_fusion','incomplete_penetration','slag_inclusion','overlap','spatter','bead_irregular'][code[1:]|int - 1] }}.svg" alt="{{ item.title }} 모식도">{% endif %}
+        <div><small>{{ '결함 단원 ' ~ code.upper() if is_lesson else '교육자료' }}</small><h3>{{ item.title }}</h3><p>{{ item.summary }}</p><span>학습하기 →</span></div>
+      </a>
+    {% endfor %}
+    </div>
+  {% endfor %}
+{% elif view == 'article' %}
+  <p><a href="{{ root }}/portal/learning">← 교육 과정 전체</a></p>
+  <div class="page-head"><div><h1>{{ article.title }}</h1><p class="muted">{{ article.summary }}</p></div></div>
+  <article class="panel learn-article">{{ body_html | safe }}</article>
+  <div class="learn-actions">{% if lesson_code.startswith('L0') %}<a class="btn btn-primary" href="{{ root }}/portal/learning/quiz/{{ lesson_code }}">이 단원 퀴즈</a>{% endif %}<a class="btn btn-secondary" href="{{ root }}/portal/learning/quiz">전체 퀴즈</a></div>
+{% elif view == 'quiz_list' %}
+  <div class="page-head"><div><h1>퀴즈 모아 풀기</h1><p class="muted">객관식 9문항과 서술형 37문항 · 서술형은 모범 답안과 비교해 스스로 평가합니다.</p></div><a class="btn btn-secondary" href="{{ root }}/portal/learning/quiz/history">나의 기록</a></div>
+  {% for group, heading in [('choice','단원 객관식'),('written','단원·상황형 서술형')] %}
+  <h2 class="learn-section">{{ heading }}</h2><div class="learn-grid">
+    {% for quiz in quizzes if quiz.kind == group %}
+      <a class="learn-card learn-quiz-card" href="{{ root }}/portal/learning/quiz/{{ quiz.content_key }}"><div><small>{{ quiz.content_key }}</small><h3>{{ quiz.lesson_title }}</h3><p>{{ quiz.question | truncate(105) }}</p><span>문제 풀기 →</span></div></a>
+    {% endfor %}
+  </div>{% endfor %}
+{% elif view == 'quiz_detail' %}
+  <p><a href="{{ root }}/portal/learning/quiz">← 퀴즈 목록</a></p>
+  <div class="page-head"><div><h1>{{ quiz.content_key }} · {{ quiz.lesson_title }}</h1><p class="muted">{{ '다음 설명에 해당하는 결함은?' if quiz.kind == 'choice' else '학습 내용을 바탕으로 답하세요.' }}</p></div></div>
+  <section class="panel learn-question"><h2>{{ quiz.question }}</h2>
+  {% if quiz.kind == 'choice' %}
+    <form method="post" action="{{ root }}/portal/learning/quiz/{{ quiz.content_key }}"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><div class="learn-options">{% for option in quiz.choices %}<label><input type="radio" name="choice" value="{{ option.key }}" required><span>{{ option.label }}</span></label>{% endfor %}</div><button class="btn btn-primary" type="submit">정답 제출</button></form>
+  {% else %}
+    <form method="post" action="{{ root }}/portal/learning/quiz/{{ quiz.content_key }}/review"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><label for="response">나의 답안</label><textarea id="response" name="response" maxlength="4000" required placeholder="관찰 사실과 추가 확인 사항을 구분해 작성하세요."></textarea><button class="btn btn-primary" type="submit">모범 답안 확인</button></form>
+  {% endif %}</section>
+{% elif view == 'review' %}
+  <p><a href="{{ root }}/portal/learning/quiz/{{ quiz.content_key }}">← 문제로 돌아가기</a></p><h1>모범 답안과 비교</h1>
+  <div class="learn-grid learn-review"><section class="panel"><h2>나의 답안</h2><p>{{ response }}</p></section><section class="panel"><h2>모범 답안</h2><p>{{ quiz.answer_text }}</p><h3>해설</h3><p>{{ quiz.explanation }}</p></section></div>
+  <p class="muted">자동 채점이 아닙니다. 핵심 내용을 비교한 뒤 자기 평가를 기록하세요.</p>
+  <form method="post" action="{{ root }}/portal/learning/quiz/{{ quiz.content_key }}" class="learn-actions"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="response" value="{{ response }}"><button class="btn btn-primary" name="assessment" value="understood">이해했어요</button><button class="btn btn-secondary" name="assessment" value="review">다시 학습할게요</button></form>
+{% elif view == 'result' %}
+  <h1>{{ '정답입니다' if correct and quiz.kind == 'choice' else ('다시 확인해보세요' if quiz.kind == 'choice' else ('이해 완료로 기록했습니다' if correct else '복습 필요로 기록했습니다')) }}</h1>
+  <section class="panel learn-question"><h2>{{ '정답·해설' if quiz.kind == 'choice' else '모범 답안' }}</h2><p>{{ quiz.answer_text or quiz.explanation }}</p>{% if quiz.kind == 'written' %}<h3>나의 답안</h3><p>{{ response }}</p>{% endif %}</section>
+  <div class="learn-actions"><a class="btn btn-secondary" href="{{ root }}/portal/learning/quiz">다른 문제</a><a class="btn btn-primary" href="{{ root }}/portal/learning/quiz/history">나의 기록</a></div>
+{% elif view == 'history' %}
+  <div class="page-head"><div><h1>나의 퀴즈 기록</h1><p class="muted">{{ attempts|length }}건 · 객관식 {{ correct_count }}/{{ choice_count }} 정답 · 로그인 계정에 저장됩니다.</p></div><a class="btn btn-primary" href="{{ root }}/portal/learning/quiz">퀴즈 풀기</a></div>
+  {% if attempts %}<div class="learn-history">{% for item in attempts %}<div class="panel"><div><b>{{ item.content_key }} · {{ item.lesson_title }}</b><p class="muted">{{ item.created_at }} · {{ item.response_text | truncate(90) if item.response_text else item.chosen_key }}</p></div><span class="badge {{ 'ok' if item.is_correct else 'ng' }}">{{ ('정답' if item.is_correct else '오답') if item.kind == 'choice' else ('이해 완료' if item.is_correct else '복습 필요') }}</span><a href="{{ root }}/portal/learning/quiz/{{ item.content_key }}">다시 풀기</a></div>{% endfor %}</div>{% else %}<section class="panel">아직 풀이 기록이 없습니다.</section>{% endif %}
+{% endif %}
+</div>
+{% endblock %}

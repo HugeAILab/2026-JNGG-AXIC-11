@@ -1,0 +1,21 @@
+{% extends "portal/base.html" %}
+{% block title %}사용자 목록{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>사용자 목록</h1><p class="muted">데모 계정 조회 (관리자 전용). 계정 추가·수정 기능은 두지 않습니다.</p></div>
+</div>
+<section class="panel">
+  <table class="tbl">
+    <thead><tr><th class="num">ID</th><th>아이디</th><th>이름</th><th>역할</th><th>마지막 로그인</th><th>생성일</th></tr></thead>
+    <tbody>
+    {% for u in rows %}
+      <tr>
+        <td class="num">{{ u.id }}</td><td><code>{{ u.username }}</code></td><td>{{ u.name }}</td>
+        <td><span class="role role-{{ u.role }}">{{ role_labels[u.role] }}</span></td>
+        <td class="muted">{{ u.last_login or '-' }}</td><td class="muted">{{ u.created_at[:10] }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

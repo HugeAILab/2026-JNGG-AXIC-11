@@ -1,0 +1,22 @@
+{% extends "portal/base.html" if user else "public_base.html" %}
+{% from "_icons.html" import icon %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<section class="panel empty-state error-state">
+  <span class="es-code">{{ code }}</span>
+  <h1>{{ title }}</h1>
+  <p class="muted">{{ message }}</p>
+  <div class="es-actions">
+    {% if user %}
+      <a class="btn btn-primary" href="{{ root }}/portal/dashboard">대시보드로</a>
+    {% else %}
+      <a class="btn btn-primary" href="{{ root }}/login">로그인</a>
+      <a class="btn btn-secondary" href="{{ root }}/">시스템 소개</a>
+    {% endif %}
+    <button class="btn btn-secondary" type="button" data-history-back>이전 화면</button>
+  </div>
+</section>
+<script nonce="{{ csp_nonce }}">
+  document.querySelector('[data-history-back]')?.addEventListener('click', function () { history.back(); });
+</script>
+{% endblock %}

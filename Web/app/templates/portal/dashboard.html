@@ -1,0 +1,89 @@
+{% extends "portal/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>{{ title }}</h1><p class="muted">{{ desc }} · <span id="span-text">집계 중…</span></p></div>
+  <div class="head-actions">
+    <nav class="period" aria-label="기간">
+      {% for d, label in [('7', '최근 7일'), ('30', '최근 30일'), ('', '전체')] %}
+      <a href="?days={{ d }}" class="{{ 'on' if days == d }}">{{ label }}</a>{% endfor %}
+    </nav>
+  </div>
+</div>
+
+<div id="dash" data-view="{{ view }}" data-days="{{ days }}">
+{% if view == 'overview' %}
+  <section class="kpis kpis-6">
+    <div class="kpi"><small>총 검사 건수</small><strong id="k-total">-</strong><span class="muted" id="k-total-sub"></span></div>
+    <div class="kpi"><small>불량률</small><strong id="k-rate">-</strong><span class="muted" id="k-rate-sub">불량 확정 ÷ 확정</span></div>
+    <div class="kpi"><small>미결 불량</small><strong class="txt-red" id="k-open">-</strong><span class="muted">조치 대기·수정 중·재검사 대기</span></div>
+    <div class="kpi"><small>재검사 합격률</small><strong id="k-re">-</strong><span class="muted" id="k-re-sub"></span></div>
+    <div class="kpi"><small>평균 처리 기간</small><strong id="k-lead">-</strong><span class="muted" id="k-lead-sub">불량 확정 → 재검사 합격</span></div>
+    <div class="kpi"><small>AI-검사자 일치율</small><strong id="k-agree">-</strong><span class="muted" id="k-agree-sub">최초 확정 기준</span></div>
+  </section>
+  <div class="grid-2 dash-grid">
+    <section class="panel span-2">
+      <div class="panel-head"><h2>일별 검사·불량 추이</h2><span class="muted small">막대 = 검사 건수 · 선 = 불량률(%)</span></div>
+      <div class="chart-box tall"><canvas id="c-daily"></canvas></div>
+    </section>
+    <section class="panel">
+      <div class="panel-head"><h2>불량 처리 단계 현황</h2><span class="muted small" id="waiting-text"></span></div>
+      <div class="chart-box"><canvas id="c-stages"></canvas></div>
+    </section>
+    <section class="panel">
+      <div class="panel-head"><h2>기한 임박·초과 미결 불량</h2><a class="small" href="{{ root }}/portal/defects?status=DEFECT">불량 관리 →</a></div>
+      <div class="tbl-wrap"><table class="tbl compact"><thead><tr><th>검사</th><th>유형</th><th>상태</th><th>담당</th><th>예정일</th></tr></thead>
+        <tbody id="t-due"></tbody></table></div>
+    </section>
+  </div>
+{% elif view == 'defects' %}
+  <div class="grid-2 dash-grid">
+    <section class="panel">
+      <div class="panel-head"><h2>작업 영역별 불량</h2><span class="muted small">불량 확정 건수 · 불량률</span></div>
+      <div class="chart-box"><canvas id="c-domain"></canvas></div>
+    </section>
+    <section class="panel">
+      <div class="panel-head"><h2>결함 유형 분포</h2><span class="muted small">불량 확정 건 · 많은 순</span></div>
+      <div class="chart-box tall"><canvas id="c-types"></canvas></div>
+    </section>
+    <section class="panel">
+      <div class="panel-head"><h2>유형별 처리</h2><span class="muted small">평균 처리 기간(확정 → 합격) · 평균 재작업 횟수</span></div>
+      <div class="tbl-wrap"><table class="tbl compact"><thead><tr><th>유형</th><th class="num">건수</th><th class="num">평균 처리(일)</th><th class="num">평균 재작업</th></tr></thead>
+        <tbody id="t-types"></tbody></table></div>
+    </section>
+    <section class="panel">
+      <div class="panel-head"><h2>AI-검사자 불일치가 많은 유형</h2><span class="muted small">검사자 확정 유형 기준</span></div>
+      <div class="tbl-wrap"><table class="tbl compact"><thead><tr><th>유형</th><th class="num">확정</th><th class="num">불일치</th><th class="num">불일치율</th></tr></thead>
+        <tbody id="t-mismatch"></tbody></table></div>
+    </section>
+    <section class="panel span-2">
+      <div class="panel-head"><h2>검토 필요 사유별 건수</h2><span class="muted small">AI 판정이 끝난 건 · 한 건에 사유가 여러 개일 수 있음</span></div>
+      <div class="chart-box short"><canvas id="c-review"></canvas></div>
+    </section>
+  </div>
+{% else %}
+  <div class="grid-2 dash-grid">
+    <section class="panel span-2">
+      <div class="panel-head"><h2>블록별 불량률</h2><span class="muted small">탱크 × 블록 · 불량 확정 ÷ 확정 · 칸의 작은 숫자는 확정 건수</span></div>
+      <div class="tbl-wrap"><table class="heat" id="t-heat"></table></div>
+      <div class="heat-legend muted small"><span>0%</span><i></i><span id="heat-max">-</span></div>
+    </section>
+    <section class="panel">
+      <div class="panel-head"><h2>용접법별 불량률</h2><span class="muted small">용접 작업만</span></div>
+      <div class="chart-box"><canvas id="c-process"></canvas></div>
+    </section>
+    <section class="panel">
+      <div class="panel-head"><h2>용접사별 불량 Top 5</h2><span class="muted small">교육 대상 추천에 활용</span></div>
+      <div class="tbl-wrap"><table class="tbl compact"><thead><tr><th>용접사</th><th class="num">불량</th><th class="num">확정</th><th class="num">불량률</th><th>최다 유형</th></tr></thead>
+        <tbody id="t-welders"></tbody></table></div>
+    </section>
+  </div>
+{% endif %}
+  <p class="muted small" id="dash-note">샘플(합성) 데이터와 업로드로 들어온 실제 검사 건을 함께 집계합니다. 모델 A·B 점수끼리 비교하는 지표는 두지 않습니다.</p>
+</div>
+{% endblock %}
+{% block scripts %}
+{# chart.js 4.4.1 자체 제공 사본. CDN 의 .min.js 는 jsdelivr 가 즉석 생성하는 파일이라 쓰지 않는다 (static/vendor/출처.md) #}
+<script src="{{ static('vendor/chart.umd.js') }}" defer></script>
+<script src="{{ static('js/dashboard.js') }}" defer></script>
+{% endblock %}

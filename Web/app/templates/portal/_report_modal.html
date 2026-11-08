@@ -1,0 +1,11 @@
+<dialog id="report-dialog" class="app-dialog report-dialog" aria-labelledby="report-dialog-title" aria-describedby="report-dialog-count">
+  <div class="app-dialog-head"><div><span class="app-dialog-eyebrow" id="report-dialog-eyebrow">품질검사 보고서</span><h2 id="report-dialog-title">보고서 생성</h2><p id="report-dialog-count" class="muted"></p></div><button type="button" class="icon-btn" id="report-close" aria-label="닫기">×</button></div>
+  <div class="app-dialog-body">
+    <div id="report-confirm-step" hidden><p id="report-confirm-description" class="confirm-dialog-lead"></p><div class="confirm-dialog-rule"><div><b>불량 판정</b><span>불량 확정 · 조치 대기</span></div><div><b>정상 판정</b><span>정상 확정</span></div><div><b>검출 없음</b><span>확정 대상에서 제외</span></div></div></div>
+    <label class="app-field" id="report-title-field" for="report-title"><span>보고서 제목</span><input id="report-title" maxlength="120" required placeholder="보고서 제목을 입력하세요"></label>
+    <fieldset id="report-type-field" class="app-choice-field"><legend>보고서 종류</legend><div class="app-choice-list"><label class="app-choice"><input type="radio" name="report-type" value="DEFECT" checked><span><b>결함 보고서</b><small>확정된 불량 항목을 정리합니다.</small></span></label><label class="app-choice"><input type="radio" name="report-type" value="COMPLETION"><span><b>완료 보고서</b><small>검사 완료 내역을 정리합니다.</small></span></label></div></fieldset>
+    <fieldset id="report-scope-field" class="app-choice-field" hidden><legend>포함 범위</legend><div class="app-choice-list"><label class="app-choice"><input type="radio" name="report-scope" value="DEFECT" checked><span><b>불량 항목만</b><small>확정된 불량 검사만 포함합니다.</small></span></label><label class="app-choice"><input type="radio" name="report-scope" value="ALL"><span><b>업로드 전체</b><small>보고서 조건에 맞는 전체 검사를 포함합니다.</small></span></label></div></fieldset>
+    <p id="report-preview" class="app-dialog-summary" role="status"></p><p id="report-error" class="txt-red" role="alert"></p>
+  </div>
+  <div class="app-dialog-actions"><button class="btn btn-secondary" id="report-cancel" type="button">취소</button><button class="btn btn-primary" id="report-confirm-submit" type="button" hidden>AI 결과대로 확정</button><button class="btn btn-primary" id="report-submit" type="button">보고서 생성</button></div>
+</dialog>

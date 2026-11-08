@@ -1,0 +1,43 @@
+{# 포털 공통 화면 조각 (상태·영역 배지, 검토 필요, 썸네일 자리표시, 페이지 이동) #}
+{% macro status(code) -%}<span class="st st-{{ code }}">{{ status_labels.get(code, code) }}</span>{%- endmacro %}
+
+{% macro domain(code) -%}<span class="dm dm-{{ code or 'WELD' }}">{{ domain_labels.get(code or 'WELD', code) }}</span>{%- endmacro %}
+
+{% macro flags(list) -%}
+{% for f in list %}<span class="flag flag-{{ f }}">{{ flag_label(f) }}</span>{% endfor %}
+{%- endmacro %}
+
+{% macro mock(on) -%}{% if on %}<span class="badge sample" title="샘플(모의) 판정 — 실제 모델 결과가 아님">모의</span>{% endif %}{%- endmacro %}
+
+{% macro conf(v) -%}
+{% if v is not none %}<span class="conf"><i style="width: {{ (v * 100)|round(0) }}%"></i></span><span class="conf-n">{{ '%.2f'|format(v) }}</span>{% else %}<span class="muted">-</span>{% endif %}
+{%- endmacro %}
+
+{# 사진이 없을 때의 자리표시: 영역 색 + 유형 이름 #}
+{% macro thumb(r, size='sm') -%}
+{% if r.image_path %}<img class="thumb thumb-{{ size }}" src="{{ root }}/portal/files/{{ r.image_path }}" alt="{{ r.code }} 사진" loading="lazy">
+{% else %}<span class="thumb thumb-{{ size }} thumb-ph dm-bg-{{ r.domain or 'WELD' }}" role="img" aria-label="사진 없음 (샘플)">
+  <b>{{ domain_labels.get(r.domain or 'WELD') }}</b>{% if size != 'sm' %}<small>{{ type_name(r.shown_type) if r.shown_type else ('정상' if r.ai_is_defect == 0 else '') }}</small><em>샘플 · 사진 없음</em>{% endif %}
+</span>{% endif %}
+{%- endmacro %}
+
+{# AI 최종 판정 한 칸 (목록용) #}
+{% macro ai_cell(r) -%}
+{% if r.ai_status == 'DONE' %}
+  {% if r.ai_is_defect %}<b class="txt-red">{{ type_name(r.ai_defect_type) }}</b>{% elif r.ai_defect_type %}<span>정상</span>{% else %}<span class="muted">검출 없음</span>{% endif %}
+  <div class="cell-sub">{{ conf(r.ai_confidence) }} <span class="src src-{{ r.ai_source }}">{{ r.ai_source }}</span>{% if r.review %} <span class="warn-ic" title="{% for f in r.flags %}{{ flag_label(f) }} {% endfor %}">⚠</span>{% endif %}</div>
+{% elif r.ai_status == 'ERROR' %}<span class="txt-red">AI 미연결</span>
+{% else %}<span class="muted">판정 대기</span>{% endif %}
+{%- endmacro %}
+
+{% macro pager(p) -%}
+{% if p.pages > 1 %}
+<nav class="pager" aria-label="페이지">
+  {% if p.page > 1 %}<a href="{{ p.qs(p.page - 1) }}">‹ 이전</a>{% endif %}
+  {% if p.window[0] > 1 %}<a href="{{ p.qs(1) }}">1</a>{% if p.window[0] > 2 %}<span>…</span>{% endif %}{% endif %}
+  {% for n in p.window %}{% if n == p.page %}<b>{{ n }}</b>{% else %}<a href="{{ p.qs(n) }}">{{ n }}</a>{% endif %}{% endfor %}
+  {% if p.window[-1] < p.pages %}{% if p.window[-1] < p.pages - 1 %}<span>…</span>{% endif %}<a href="{{ p.qs(p.pages) }}">{{ p.pages }}</a>{% endif %}
+  {% if p.page < p.pages %}<a href="{{ p.qs(p.page + 1) }}">다음 ›</a>{% endif %}
+</nav>
+{% endif %}
+{%- endmacro %}

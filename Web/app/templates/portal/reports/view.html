@@ -1,0 +1,8 @@
+{% extends "portal/base.html" %}
+{% block title %}{{ report.report_no }}{% endblock %}
+{% block content %}
+<div class="page-head"><div><h1>{{ report.title }}</h1><p class="muted">{{ report.report_no }} · {{ '결함' if report.type == 'DEFECT' else '완료' }} 보고서 · {{ report.created_at[:16] }}</p></div><div class="head-actions"><a class="btn btn-primary" href="{{ root }}/portal/reports/{{ report.id }}.pdf">PDF 다운로드</a><a class="btn btn-secondary" href="{{ root }}/portal/reports">목록</a></div></div>
+<section class="panel report-meta"><div><span>보고서 종류</span><b class="report-kind {{ 'defect' if report.type == 'DEFECT' else 'completion' }}">{{ '결함 보고서' if report.type == 'DEFECT' else '완료 보고서' }}</b></div><div><span>포함 항목</span><b>{{ report.item_count }}건</b></div><div><span>작성자</span><b>{{ report.author_name or '-' }}</b></div><div><span>생성 경로</span><b>{{ '업로드 #' ~ report.upload_log_id if report.upload_log_id else '목록 선택' }}</b></div></section>
+<section class="panel report-body">{{ report.body_html|safe }}</section>
+<section class="panel report-current"><h2>포함된 검사 · 현재 상태</h2><ul>{% for it in items %}<li><a href="{{ root }}/portal/inspections/{{ it.id }}">{{ it.code }}</a><span class="st st-{{ it.status }}">{{ status_labels.get(it.status, it.status) }}</span></li>{% endfor %}</ul></section>
+{% endblock %}

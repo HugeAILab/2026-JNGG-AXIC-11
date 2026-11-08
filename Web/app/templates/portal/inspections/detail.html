@@ -1,0 +1,342 @@
+{% extends "portal/base.html" %}
+{% import "portal/_ui.html" as ui %}
+{% block title %}{{ it.code }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ static('css/segmentation.css') }}">{% endblock %}
+{% block content %}
+{% set A = ai.A %}{% set B = ai.B %}
+{% macro type_select(name, value) -%}
+<select name="{{ name }}">{% for d, types in types_by_domain %}<optgroup label="{{ domain_labels.get(d) }}">{% for t in types %}<option value="{{ t.code }}" {{ 'selected' if t.code == value }}>{{ t.name_ko }}</option>{% endfor %}</optgroup>{% endfor %}</select>
+{%- endmacro %}
+<div class="page-head">
+  <div>
+    <h1>검사 {{ it.code }} {{ ui.status(it.status) }} {% if it.is_sample %}<span class="badge sample">샘플</span>{% endif %}</h1>
+    <p class="muted">{{ it.tank_no }} / {{ it.block }} / {{ it.joint_no }} · {{ domain_labels.get(it.domain) }} · 검사 {{ it.inspected_at[:16] }}</p>
+  </div>
+  <div class="head-actions">
+    {% if neighbors.prev_id %}<a class="btn btn-secondary" href="{{ root }}/portal/inspections/{{ neighbors.prev_id }}">‹ 이전</a>{% endif %}
+    <a class="btn btn-secondary" href="{{ root }}/portal/inspections">목록</a>
+    {% if neighbors.next_id %}<a class="btn btn-secondary" href="{{ root }}/portal/inspections/{{ neighbors.next_id }}">다음 ›</a>{% endif %}
+  </div>
+</div>
+
+{% if msg %}<div class="alert info" role="status">{{ msg }}</div>{% endif %}
+{% if err %}<div class="alert error" role="alert">{{ err }}</div>{% endif %}
+{% if included_reports %}<section class="panel"><h2>이 결함이 포함된 보고서</h2><ul>{% for r in included_reports %}<li><a href="{{ root }}/portal/reports/{{ r.id }}">{{ r.report_no }} · {{ r.title }}</a></li>{% endfor %}</ul></section>{% endif %}
+{% if it.ai_status in ('QUEUED', 'RUNNING') %}<div class="alert info" id="ai-running" role="status">AI 판정 중입니다… 끝나면 화면이 새로 고쳐집니다.</div>{% endif %}
+
+<div class="detail-grid">
+  {# ① 사진 · ② 기본 정보 #}
+  <section class="panel">
+    <div class="panel-head"><h2>① 사진</h2><span class="muted small">최초 검사 / 수정 후 / 재검사</span></div>
+    {% if photos %}
+      <a href="{{ photos[0].url }}" target="_blank" rel="noopener"><img class="thumb thumb-lg photo-main" src="{{ photos[0].url }}" alt="{{ it.code }} 사진"></a>
+      {% if photos|length > 1 or reinspect_photos %}
+      <div class="photo-strip">
+        {% for ph in photos %}<a href="{{ ph.url }}" target="_blank" rel="noopener"><img src="{{ ph.url }}" alt="{{ ph.label }}"><span>{{ ph.label }}</span></a>{% endfor %}
+        {% for r in reinspect_photos %}<a href="{{ root }}/portal/files/{{ r.image_path }}" target="_blank" rel="noopener"><img src="{{ root }}/portal/files/{{ r.image_path }}" alt="재검사 사진"><span>재검사 AI {{ r.created_at[5:16] }}</span></a>{% endfor %}
+      </div>
+      {% endif %}
+    {% else %}{{ ui.thumb(it, 'lg') }}{% endif %}
+    <div class="photo-actions">
+      <button class="btn btn-primary" type="button" id="open-seg" data-id="{{ it.id }}" {{ 'disabled' if not (A and A.raw_path) }}
+        title="{{ '모델 A 원본 결과(전체 후보·마스크)' if A and A.raw_path else '마스크가 없습니다 (샘플 건 또는 판정 전)' }}">분할 결과 보기 (마스크)</button>
+      {% if can_predict and it.image_path %}
+      <button class="btn btn-secondary" type="button" id="open-predict">AI 다시 판정</button>{% endif %}
+    </div>
+    <h2 class="sub-h">② 기본 정보</h2>
+    <dl class="kv">
+      <dt>프로젝트</dt><dd>{{ it.project }}</dd>
+      <dt>탱크 / 블록</dt><dd>{{ it.tank_no }} / {{ it.block }}</dd>
+      <dt>위치</dt><dd>{{ it.joint_no }}</dd>
+      <dt>작업 종류</dt><dd>{{ domain_labels.get(it.work_type, it.work_type or '-') if it.work_type != 'MIXED' else '혼합' }}</dd>
+      {% if it.weld_process and it.weld_process != '-' %}
+      <dt>용접법 / 자세</dt><dd>{{ it.weld_process }} / {{ it.weld_position or '-' }}</dd>
+      <dt>용접사</dt><dd>{{ it.welder or '-' }}</dd>
+      {% endif %}
+      <dt>검사자</dt><dd>{{ it.inspector_name or '-' }}</dd>
+      <dt>검사 일시</dt><dd>{{ it.inspected_at }}</dd>
+      {% if upload %}<dt>업로드</dt><dd><a href="{{ root }}/portal/inspections/uploads/{{ upload.id }}">UPLOAD #{{ upload.id }}</a> · {{ upload.summary }}</dd>{% endif %}
+    </dl>
+  </section>
+
+  {# ③-1 AI 판정 (파이프라인) #}
+  <section class="panel">
+    <div class="panel-head"><h2>③-1 AI 판정</h2>{{ ui.mock(it.is_mock) }}</div>
+    <ol class="pipe">
+      <li class="{{ 'done' if A and A.status == 'OK' else ('fail' if A else 'wait') }}"><b>A 선별</b><small>{{ (A.model_name if A.status == 'OK' else '실패: ' ~ (A.error or A.status)) if A else '실행 전' }}</small></li>
+      <li class="{{ 'done' if B and B.status == 'OK' else ('fail' if B else ('skip' if it.ai_status == 'DONE' else 'wait')) }}">
+        <b>B 용접 상세</b><small>{% if B %}{{ ('멀티모달 JSON' if B.is_multimodal else B.model_name) if B.status == 'OK' else '실패: ' ~ (B.error or B.status) }}{% elif it.ai_status in ('QUEUED','RUNNING') %}판정 대기{% elif it.domain == 'WELD' and it.ai_is_defect %}실행 안 됨 (모델 B 미연결){% else %}해당 없음 (용접 사진 아님 또는 B 미설정){% endif %}</small></li>
+      <li class="{{ 'done' if analysis and analysis.status in ('DONE','PARTIAL') else ('wait' if not analysis or analysis.status == 'RUNNING' else 'fail') }}"><b>설명·원인·방지</b><small>{% if analysis %}{{ '작성 중' if analysis.status == 'RUNNING' else ('AI 초안 · 근거 검색' if analysis.explain_source == 'LLM' else 'AI 초안 · 유형 가이드') }}{% else %}분석 전{% endif %}</small></li>
+    </ol>
+
+    <div class="final">
+      {% if it.ai_status == 'DONE' %}
+        <div class="final-main">
+          {% if it.ai_is_defect %}<span class="final-type txt-red">{{ type_name(it.ai_defect_type) }}</span>
+          {% elif it.ai_defect_type %}<span class="final-type">정상</span>
+          {% else %}<span class="final-type muted">검출 없음</span>{% endif %}
+          {{ ui.domain(it.domain) }}
+          {% if it.ai_source %}<span class="src src-{{ it.ai_source }}">판정 모델 {{ it.ai_source }}</span>{% endif %}
+        </div>
+        <div class="final-conf">{{ ui.conf(it.ai_confidence) }}<span class="muted small">모델 점수 — 참고용</span></div>
+        {% if it.flags %}<div class="final-flags">{{ ui.flags(it.flags) }}</div>{% endif %}
+        {% if it.findings %}<div class="small">함께 발견:
+          {% for f in it.findings %}<span class="chip">{{ f.class if f['from'] == 'A' else type_name(f.code) }} {{ '%.2f'|format(f.score) }} <em>{{ f['from'] }}</em></span>{% endfor %}</div>{% endif %}
+      {% elif it.ai_status == 'ERROR' %}<p class="txt-red">AI 판정 실패 — 원본 사진과 현장 상태를 확인해 수동 판정하세요. {{ it.ai_error or '' }}</p>
+      {% elif it.ai_status in ('QUEUED', 'RUNNING') %}<p class="muted">AI 판정 중입니다…</p>
+      {% else %}<p class="muted">AI 판정 전입니다.</p>{% endif %}
+    </div>
+
+    {% if A and A.status == 'OK' %}
+    <div class="mcard">
+      <div class="model-a-heading"><b>모델 A</b> · {{ A.model_name }} {{ ui.mock(A.is_mock) }}<span class="muted small">{{ A.created_at[:16] }} · {{ ((A.elapsed_ms or 0) / 1000)|round(1) }}초</span></div>
+      {% if A.top_class %}
+        <p>대표 후보: <b>{{ A.top_class }}</b> ({{ '%.2f'|format(A.top_score) }}){% if A.candidates and A.candidates[0].area_ratio %} · 결함 영역 사진의 약 {{ '%.1f'|format(A.candidates[0].area_ratio * 100) }}%{% endif %}</p>
+      {% else %}<p class="muted">기준(0.50)을 넘은 후보가 없습니다. 검출 없음이 양품을 뜻하지는 않습니다.</p>{% endif %}
+      {% if A.summary_sorted %}
+      <details class="model-a-classes"><summary>분류별 요약 보기 ({{ A.summary_sorted|length }}개)</summary>
+      <table class="tbl compact"><thead><tr><th>분류</th><th class="num">후보 수</th><th class="num">최고 점수</th></tr></thead><tbody>
+        {% for name, s in A.summary_sorted %}<tr><td>{{ name }}</td><td class="num">{{ s.count }}</td><td class="num {{ 'muted' if s.max < 0.5 }}">{{ '%.2f'|format(s.max) }}</td></tr>{% endfor %}
+      </tbody></table>
+      <p class="muted small">분류별 요약은 필터 전 원본 기준. 후보 수는 결함 개수가 아닙니다.</p>
+      </details>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% if B and B.status == 'OK' %}
+    <details class="mcard" open>
+      <summary><b>모델 B</b> · {{ '멀티모달 JSON' if B.is_multimodal else B.model_name }} {{ ui.mock(B.is_mock) }}<span class="muted small">{{ B.created_at[:16] }}</span></summary>
+      {% if B.is_multimodal %}<p class="muted small">사진에서 선택한 결함 후보와 모델 점수입니다. 표시되지 않은 유형은 점수를 출력하지 않았습니다.</p>{% endif %}
+      <div class="scores">
+        {% for code, s in B.scores_sorted %}
+        {% if not B.is_multimodal or (code != 'NORMAL' and s > 0) %}
+        <div class="score-row {{ 'top' if loop.index <= 3 and s >= 0.5 }} {{ 'rest' if loop.index > 5 }}">
+          <span class="score-name">{{ type_name(code) }}</span>
+          <span class="bar"><i style="width: {{ (s * 100)|round(0) }}%" class="{{ ('ok' if code == 'NORMAL' else 'hi') if s >= 0.5 }}"></i></span>
+          <span class="score-n">{{ '%.2f'|format(s) }}</span>
+        </div>
+        {% endif %}
+        {% endfor %}
+      </div>
+      {% if B.is_multimodal and not B.keywords %}<p>선택된 결함 후보가 없습니다.</p>{% endif %}
+      {% if not B.is_multimodal %}<button type="button" class="link-btn" data-toggle-rest>나머지 점수 보기</button>{% endif %}
+      {% if B.keywords %}<div class="chips">{% for k in B.keywords %}<span class="chip">{{ k }}</span>{% endfor %}</div>{% endif %}
+      <dl class="kv small">
+        {% if B.observation %}<dt>관찰</dt><dd>{{ B.observation }}</dd>{% endif %}
+        {% if B.location %}<dt>위치</dt><dd>{{ B.location }}</dd>{% endif %}
+        <dt>사진 품질</dt><dd>{{ {'OK': '양호', 'BLUR': '흐림', 'DARK': '어두움', 'NOT_WELD': '용접 사진 아님'}.get(B.image_quality, '-') }}</dd>
+      </dl>
+    </details>
+    {% endif %}
+
+    <h2 class="sub-h">③-2 불량 설명 · 원인 · 방지</h2>
+    {% if analysis and analysis.status in ('DONE','PARTIAL') %}
+      <p><span class="badge sample">AI 초안 · {{ '근거 검색' if analysis.explain_source == 'LLM' else '템플릿' }}</span> {{ analysis.description }}</p>
+      {% if analysis.causes %}<h3>가능 원인 점검</h3><ul>{% for item in analysis.causes %}<li>{{ item }}</li>{% endfor %}</ul>{% endif %}
+      {% if analysis.prevention %}<h3>작업·보수 조건 검토</h3><ul>{% for item in analysis.prevention %}<li>{{ item }}</li>{% endfor %}</ul>{% endif %}
+      {% if analysis.checks %}<h3>추가 확인</h3><ul>{% for item in analysis.checks %}<li>{{ item }}</li>{% endfor %}</ul>{% endif %}
+      {% if analysis.rag_hits %}
+        <details class="mcard"><summary>검색 근거 {{ analysis.rag_hits|length }}건 보기</summary>
+          {% for hit in analysis.rag_hits %}
+            <div class="rag-hit"><b>[{{ hit.no }}] {{ hit.doc }} · {{ hit.section }}</b> <small>{{ hit.source }}</small>
+              <p>{{ hit.text }}</p>
+            </div>
+          {% endfor %}
+        </details>
+      {% endif %}
+    {% elif analysis and analysis.status == 'RUNNING' %}
+      <p class="muted" id="analysis-running">교육자료와 사례를 검색해 설명 초안을 작성하고 있습니다.</p>
+    {% else %}
+      <p class="muted">아직 설명 초안이 없습니다. 아래 유형 가이드를 참고하세요.</p>
+    {% endif %}
+    <p class="muted small">설명은 AI 초안이며 합격·불합격 판정이나 보수 승인에 사용하지 않습니다.</p>
+  </section>
+</div>
+
+<div class="detail-grid">
+  {# ④ 검사자 확정 · ⑤ 조치 #}
+  <section class="panel" id="actions">
+    <h2>④ 검사자 확정</h2>
+    {% if it.final_is_defect is none %}
+      {% if 'CONFIRM_DEFECT' in actions %}
+      <form class="act-form" method="post" action="{{ root }}/portal/inspections/{{ it.id }}/confirm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="decision">
+          <label><input type="radio" name="decision" value="defect" {{ 'checked' if it.ai_is_defect }}><span class="d-ng">불량</span></label>
+          <label><input type="radio" name="decision" value="ok" {{ 'checked' if not it.ai_is_defect }}><span class="d-ok">정상</span></label>
+        </div>
+        <div class="defect-only form-grid">
+          <label class="fg"><span>결함 유형 (1개)</span>{{ type_select('defect_type', it.ai_defect_type) }}</label>
+          <label class="fg"><span>심각도</span><select name="severity"><option value="">유형 기본값</option>{% for sv in severities %}<option>{{ sv }}</option>{% endfor %}</select></label>
+        </div>
+        <label class="fg"><span>소견 <small class="muted">(불량이면 필수)</small></span><textarea name="finding" rows="3" maxlength="2000">{{ finding_draft }}</textarea></label>
+        <p class="muted small">기본값은 AI 최종 판정입니다{% if it.ai_status != 'DONE' %} (AI 판정 전 확정은 일치율 계산에서 빠집니다){% endif %}.</p>
+        <button class="btn btn-primary" type="submit">확정</button>
+      </form>
+      {% else %}<p class="muted">확정 대기. 확정은 관리자·품질 관리자·품질 검사자가 할 수 있습니다.</p>{% endif %}
+    {% else %}
+      <dl class="kv">
+        <dt>판정</dt><dd>{% if it.final_is_defect %}<b class="txt-red">불량</b>{% else %}정상{% endif %}
+          {% if it.ai_agree == 0 %}<span class="flag flag-AB_DIFFER">AI 판정과 다름</span>{% endif %}</dd>
+        {% if it.defect_type %}<dt>결함 유형</dt><dd>{{ type_name(it.defect_type) }} · 심각도 {{ it.severity or '-' }}</dd>{% endif %}
+        <dt>소견</dt><dd>{{ it.finding or '-' }}</dd>
+      </dl>
+    {% endif %}
+    {% if it.final_is_defect %}
+    <h2 class="sub-h">⑤ 조치 · 재검사</h2>
+    <dl class="kv">
+      <dt>추정 원인</dt><dd>{{ it.cause or '-' }}</dd>
+      <dt>조치 계획</dt><dd>{{ it.action_plan or '-' }}</dd>
+      <dt>조치 결과</dt><dd>{{ it.action_result or '-' }}</dd>
+      <dt>담당 / 예정일</dt><dd>{{ it.assignee or '-' }} / <span class="{{ 'txt-red' if it.overdue }}">{{ it.due_date or '-' }}{{ ' (기한 초과)' if it.overdue }}</span></dd>
+      <dt>재작업 횟수</dt><dd>{{ it.rework_count }}회</dd>
+    </dl>
+    {% if 'REWORK_PLAN' in actions %}
+    <form class="act-form" method="post" action="{{ root }}/portal/inspections/{{ it.id }}/rework-plan">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <h3>조치 계획 등록 → 수정 중</h3>
+      <label class="fg"><span>추정 원인</span><textarea name="cause" rows="2" required maxlength="2000">{{ guide.causes if guide else '' }}</textarea></label>
+      <label class="fg"><span>조치 방법</span><textarea name="action_plan" rows="2" required maxlength="2000">{{ guide.remedies if guide else '' }}</textarea></label>
+      <div class="form-grid">
+        <label class="fg"><span>담당자</span><input name="assignee" required maxlength="60" placeholder="예: 박용접"></label>
+        <label class="fg"><span>예정일</span><input type="date" name="due_date" required value="{{ today }}"></label>
+      </div>
+      <button class="btn btn-primary" type="submit">조치 계획 등록</button>
+    </form>
+    {% endif %}
+    {% if 'REWORK_DONE' in actions %}
+    <form class="act-form" method="post" action="{{ root }}/portal/inspections/{{ it.id }}/rework-done" enctype="multipart/form-data">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <h3>수정 완료 → 재검사 대기</h3>
+      <label class="fg"><span>조치 결과</span><textarea name="action_result" rows="2" required maxlength="2000"></textarea></label>
+      <label class="fg"><span>수정 후 사진 (선택)</span><input type="file" name="photo" accept="image/jpeg,image/png"></label>
+      <button class="btn btn-primary" type="submit">수정 완료 등록</button>
+    </form>
+    {% endif %}
+    {% if 'REINSPECT_OK' in actions %}
+    <div class="act-form">
+      <h3>재검사</h3>
+      <form method="post" action="{{ root }}/portal/inspections/{{ it.id }}/reinspect/photo" enctype="multipart/form-data" class="inline-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <span class="muted small">① 재검사 사진을 올리면 AI 판정을 다시 합니다 (상태는 그대로).</span>
+        <input type="file" name="photo" accept="image/jpeg,image/png" required>
+        <button class="btn btn-secondary" type="submit" {{ 'disabled' if it.ai_status in ('QUEUED', 'RUNNING') }}>재검사 사진 올리기</button>
+      </form>
+      <form method="post" action="{{ root }}/portal/inspections/{{ it.id }}/reinspect">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <p class="muted small">② AI 결과(위 ③)를 보고 결정하세요. AI가 실패해도 결정할 수 있습니다.</p>
+        <div class="decision">
+          <label><input type="radio" name="decision" value="pass" checked><span class="d-ok">합격</span></label>
+          <label><input type="radio" name="decision" value="fail"><span class="d-ng">불합격</span></label>
+        </div>
+        <div class="defect-only form-grid">
+          <label class="fg"><span>결함 유형</span>{{ type_select('defect_type', it.defect_type) }}</label>
+          <label class="fg"><span>심각도</span><select name="severity"><option value="">유형 기본값</option>{% for sv in severities %}<option {{ 'selected' if sv == it.severity }}>{{ sv }}</option>{% endfor %}</select></label>
+        </div>
+        <label class="fg"><span>소견 · 의견 <small class="muted">(불합격이면 필수)</small></span><textarea name="finding" rows="2" maxlength="2000"></textarea></label>
+        <button class="btn btn-primary" type="submit">재검사 결과 등록</button>
+      </form>
+    </div>
+    {% endif %}
+    {% if 'REJECT' in actions %}
+    <details class="act-form danger">
+      <summary>폐기·재제작 (관리자){% if it.rework_count < 3 %} <span class="muted small">— 보통 재작업 3회 이상일 때</span>{% endif %}</summary>
+      <form method="post" action="{{ root }}/portal/inspections/{{ it.id }}/reject">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <label class="fg"><span>폐기 사유</span><textarea name="reason" rows="2" required maxlength="1000"></textarea></label>
+        <button class="btn btn-danger" type="submit">폐기 처리</button>
+      </form>
+    </details>
+    {% endif %}
+    {% if not actions and it.status in ('DEFECT', 'REWORK', 'REINSPECT') %}<p class="muted small">이 단계의 처리는 다른 역할이 합니다 (조치 등록: 관리자·품질 관리자·생산 담당 / 재검사: 관리자·품질 관리자·검사자).</p>{% endif %}
+    {% endif %}
+  </section>
+
+  {# ⑧ 유형 가이드 #}
+  <section class="panel">
+    <h2>⑧ 결함 유형 가이드</h2>
+    {% if guide %}
+      <p><b>{{ guide.name_ko }}</b> <span class="muted">{{ guide.code }}</span> {{ ui.domain(guide.domain) }}</p>
+      <dl class="kv">
+        <dt>외관 특징</dt><dd>{{ guide.description }}</dd>
+        <dt>주요 원인</dt><dd>{{ guide.causes }}</dd>
+        <dt>대책·방지</dt><dd>{{ guide.remedies }}</dd>
+        <dt>심각도</dt><dd>{{ guide.severity }}</dd>
+      </dl>
+      {% if related_lesson %}<p><a class="btn btn-secondary" href="{{ root }}/portal/learning/{{ related_lesson }}">{{ guide.name_ko }} 교육 단원 보기</a> <a href="{{ root }}/portal/learning/quiz/{{ related_lesson }}">관련 퀴즈 풀기 →</a></p>{% endif %}
+    {% else %}<p class="muted">불량 유형이 없습니다.</p>{% endif %}
+    <h2 class="sub-h">⑦ 유사 결함 사례</h2>
+    <p class="muted">BM25 유사 사례 검색은 <b>4단계</b>에서 추가됩니다.</p>
+  </section>
+</div>
+
+{# ⑥ 처리 이력 #}
+<section class="panel">
+  <div class="panel-head"><h2>⑥ 처리 이력</h2><span class="muted small">{{ events|length }}건</span></div>
+  <ol class="timeline">
+    {% for e in events %}
+    <li class="tl tl-{{ e.action }}">
+      <div class="tl-head"><b>{{ event_labels.get(e.action, e.action) }}</b>
+        {% if e.from_status %}<span class="muted small">{{ status_labels.get(e.from_status) }} → </span>{% endif %}{{ ui.status(e.to_status) }}
+        <span class="muted small">{{ e.created_at[:16] }} · {{ e.actor_name or 'AI' }}</span></div>
+      {% if e.comment %}<div class="tl-body">{{ e.comment }}</div>{% endif %}
+      {% if e.image_path %}<a class="small" href="{{ root }}/portal/files/{{ e.image_path }}" target="_blank" rel="noopener">사진 보기</a>{% endif %}
+    </li>
+    {% else %}<li class="muted">이력이 없습니다.</li>{% endfor %}
+  </ol>
+</section>
+<dialog class="seg-dialog" id="seg-dialog">
+  <div class="sd-head"><b>{{ it.code }} · 모델 A 분할 결과</b><button type="button" class="icon-btn" data-close aria-label="닫기">×</button></div>
+  <p class="muted small" id="sd-status"></p>
+  {% include "portal/inspections/_seg_viewer.html" %}
+</dialog>
+<dialog class="notice-dialog" id="predict-dialog" aria-labelledby="predict-dialog-title">
+  <h2 id="predict-dialog-title">AI 다시 판정</h2>
+  <p>아직 준비 중입니다.</p>
+  <form method="dialog"><button class="btn btn-primary" type="submit">확인</button></form>
+</dialog>
+{% endblock %}
+{% block scripts %}
+<script src="{{ static('js/segmentation.js') }}" defer></script>
+<script nonce="{{ csp_nonce }}">
+document.addEventListener("DOMContentLoaded", function () {
+  var dlg = document.getElementById("seg-dialog"), btn = document.getElementById("open-seg");
+  if (btn) btn.addEventListener("click", function () {
+    document.getElementById("sd-status").textContent = "불러오는 중…";
+    window.SegViewer.hide(); dlg.showModal();
+    window.SegViewer.load(WS.root, btn.dataset.id).then(function (b) {
+      document.getElementById("sd-status").textContent = (b.trigger === "REINSPECT" ? "재검사 사진 결과 · " : "") + b.created_at + " · 후보를 선택해 마스크를 대조하세요.";
+    }).catch(function (e) { document.getElementById("sd-status").textContent = e.message; });
+  });
+  dlg.addEventListener("click", function (e) { if (e.target === dlg || e.target.closest("[data-close]")) dlg.close(); });
+  var predictBtn = document.getElementById("open-predict"), predictDlg = document.getElementById("predict-dialog");
+  if (predictBtn) predictBtn.addEventListener("click", function () { predictDlg.showModal(); });
+  predictDlg.addEventListener("click", function (e) { if (e.target === predictDlg) predictDlg.close(); });
+  // 불량/정상 · 합격/불합격 선택에 따라 유형 칸 보이기
+  document.querySelectorAll("form").forEach(function (f) {
+    var box = f.querySelector(".defect-only"); if (!box) return;
+    function sync() { var v = (f.querySelector("[name=decision]:checked") || {}).value; box.hidden = !(v === "defect" || v === "fail"); }
+    f.querySelectorAll("[name=decision]").forEach(function (r) { r.addEventListener("change", sync); }); sync();
+  });
+  // AI 판정 중이면 끝날 때까지 2초마다 확인
+  if (document.getElementById("ai-running")) (function check() {
+    WS.fetch("/portal/api/inspections/{{ it.id }}/ai", {silent: true}).then(function (d) {
+      if (d.final.ai_status === "DONE" || d.final.ai_status === "ERROR") location.reload(); else setTimeout(check, 2000);
+    }).catch(function () { setTimeout(check, 4000); });
+  })();
+  if (document.getElementById("analysis-running")) (function checkAnalysis() {
+    WS.fetch("/portal/api/analysis/{{ it.id }}", {silent: true}).then(function (d) {
+      if (d.analysis && d.analysis.status !== "RUNNING") location.reload();
+      else setTimeout(checkAnalysis, 2000);
+    }).catch(function () { setTimeout(checkAnalysis, 4000); });
+  })();
+});
+</script>
+<script nonce="{{ csp_nonce }}">
+document.addEventListener("click", function (e) {
+  var b = e.target.closest("[data-toggle-rest]");
+  if (b) { var box = b.previousElementSibling; box.classList.toggle("show-rest"); b.textContent = box.classList.contains("show-rest") ? "접기" : "나머지 점수 보기"; }
+});
+</script>
+{% endblock %}

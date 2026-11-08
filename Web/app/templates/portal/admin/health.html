@@ -1,0 +1,52 @@
+{% extends "portal/base.html" %}
+{% block title %}AI 연결 상태{% endblock %}
+{% block content %}
+{% macro ready(v, mock) -%}
+{% if mock %}<span class="badge sample">모의</span>{% elif v is none %}<span class="st st-PENDING">미설정</span>{% elif v %}<span class="st st-PASS">준비 완료</span>{% else %}<span class="st st-DEFECT">연결 안 됨</span>{% endif %}
+{%- endmacro %}
+<div class="page-head">
+  <div><h1>AI 연결 상태</h1><p class="muted">AI_MODE = <code>{{ mode }}</code> · 모델 A·B와 RAG 연결 및 최근 처리 결과</p></div>
+  <div class="head-actions"><a class="btn btn-secondary" href="{{ root }}/portal/admin/health">다시 확인</a></div>
+</div>
+<div class="grid-2">
+  <section class="panel">
+    <div class="panel-head"><h2>모델 A · 작업 영역·불량 후보</h2>{{ ready(a_ready, a.is_mock) }}</div>
+    <dl class="kv">
+      <dt>사용 모델</dt><dd><code>{{ a.key }}</code> {{ '모의 모델 A (개발용)' if a.is_mock else 'AIStream MaskDINO 영역 분할' }}</dd>
+      {% if not a.is_mock %}<dt>주소</dt><dd class="small">{{ a_url }}</dd>{% endif %}
+      <dt>동시 호출</dt><dd>2건 (A 서빙 대기열이 작음), 429 이면 최대 3회 재시도</dd>
+    </dl>
+  </section>
+  <section class="panel">
+    <div class="panel-head"><h2>모델 B · 용접 상세</h2>{% if b %}{{ ready(b_ready, b.is_mock) }}{% else %}<span class="st st-PENDING">건너뜀</span>{% endif %}</div>
+    <dl class="kv">
+      <dt>사용 모델</dt><dd>{% if b %}<code>{{ b.key }}</code> {{ '모의 모델 B' if b.is_mock else '용접 상세 분석 API' }}{% else %}없음 — MODEL_B_URL 이 비어 있어 용접 불량은 A 대응 코드로 판정하고 '용접 세부 분석 없음'을 표시합니다{% endif %}</dd>
+      {% if b and not b.is_mock %}<dt>주소</dt><dd class="small">{{ b_url }}</dd>{% endif %}
+      <dt>대표 유형 기준</dt><dd>{{ '%.2f'|format(b_threshold) }} (MODEL_B_THRESHOLD)</dd>
+    </dl>
+  </section>
+</div>
+<section class="panel mt">
+  <div class="panel-head"><h2>RAG · 불량 설명 근거 검색</h2>
+    {% if rag_connection.ready is none %}<span class="st st-PENDING">외부 미설정</span>
+    {% elif rag_connection.ready %}<span class="st st-PASS">연결됨</span>
+    {% else %}<span class="st st-DEFECT">연결 안 됨</span>{% endif %}
+  </div>
+  <p class="muted">{{ rag_connection.message }}. {{ '모의 모드에서는 외부 챗봇을 호출하지 않습니다.' if mode == 'mock' else '외부 호출에 실패하면 유형 가이드 초안으로 대체합니다.' }}</p>
+  <dl class="kv">
+    <dt>로컬 교육 문서</dt><dd>{{ rag_docs }}개 조각</dd>
+    <dt>누적 검사 사례</dt><dd>{{ rag_cases }}개 조각</dd>
+    <dt>외부 응답 제한</dt><dd>{{ rag_timeout|int }}초</dd>
+  </dl>
+</section>
+<section class="panel mt">
+  <div class="panel-head"><h2>판정 작업</h2><span class="muted small">대기·실행 중 {{ queue }}건 · 이 프로세스의 작업 {{ running }}개</span></div>
+  <div class="tbl-wrap"><table class="tbl compact">
+    <thead><tr><th>단계</th><th>모델</th><th>결과</th><th class="num">건수</th><th>마지막</th></tr></thead>
+    <tbody>
+    {% for r in recent %}<tr><td>{{ r.stage }}</td><td><code>{{ r.model_key }}</code></td><td><span class="st {{ 'st-PASS' if r.status == 'OK' else 'st-DEFECT' }}">{{ r.status }}</span></td><td class="num">{{ r.n }}</td><td>{{ r.last }}</td></tr>
+    {% else %}<tr><td colspan="5" class="empty">아직 업로드로 실행한 AI 판정이 없습니다 (샘플 결과는 제외).</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+</section>
+{% endblock %}

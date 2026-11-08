@@ -1,0 +1,59 @@
+{% from "_icons.html" import icon %}
+<!doctype html>
+<html lang="ko">
+<head>
+  {% include "_head.html" %}
+  <title>로그인 · {{ app_name }}</title>
+  <link rel="stylesheet" href="{{ static('css/portal.css') }}">
+</head>
+<body class="auth-body">
+<main class="auth">
+  <section class="auth-visual" aria-hidden="true">
+    <a class="auth-logo" href="{{ root }}/"><span class="logo-mark">{{ icon('scan') }}</span>{{ app_name }}</a>
+    <div class="auth-visual-copy">
+      <h1>LNG 탱크 용접 품질,<br>AI로 판정하고 끝까지 추적합니다</h1>
+      <p>사진 업로드 → AI 판정 → 검사자 확정 → 수정·재검사 → 보고서·교육</p>
+    </div>
+    <div class="auth-grid"></div>
+  </section>
+
+  <section class="auth-panel">
+    <div class="auth-card">
+      <a class="auth-logo mobile" href="{{ root }}/"><span class="logo-mark">{{ icon('scan') }}</span>{{ app_name }}</a>
+      <h2>로그인</h2>
+      <p class="muted">품질 관리 포털에 접속합니다.</p>
+
+      {% if bye %}<div class="alert info">로그아웃되었습니다.</div>{% endif %}
+      {% if error %}<div class="alert error" role="alert">{{ error }}</div>{% endif %}
+
+      <form method="post" action="{{ root }}/login" class="form" autocomplete="on">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="next" value="{{ next }}">
+        <label class="field"><span>아이디</span>
+          <input id="username" name="username" value="{{ username }}" required autofocus autocomplete="username" maxlength="50">
+        </label>
+        <label class="field"><span>비밀번호</span>
+          <input id="password" name="password" type="password" required autocomplete="current-password" maxlength="100">
+        </label>
+        <button class="btn btn-primary btn-block" type="submit">로그인</button>
+      </form>
+
+      <div class="demo-box">
+        <div class="demo-head">{{ icon('users') }}<b>심사·체험용 데모 계정</b><span>비밀번호 <code>{{ demo_password }}</code></span></div>
+        <ul>
+          {% for a in demo_accounts %}
+          <li><button type="button" class="demo-fill" data-user="{{ a.username }}" data-pass="{{ demo_password }}">
+            <code>{{ a.username }}</code><span>{{ a.name }} · {{ role_labels[a.role] }}</span><small>{{ a.use }}</small>
+          </button></li>
+          {% endfor %}
+        </ul>
+        <p class="muted small">계정을 누르면 입력란이 채워집니다. 모든 데이터는 합성 샘플입니다.</p>
+      </div>
+      <p class="auth-foot"><a href="{{ root }}/">← 시스템 소개로</a></p>
+    </div>
+  </section>
+</main>
+<script src="{{ static('js/portal.js') }}" defer></script>
+{% include "_version.html" %}
+</body>
+</html>
